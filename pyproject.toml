@@ -40,6 +40,7 @@ include = ["apps*", "packages*"]
 
 [tool.setuptools.package-data]
 "packages.schemas" = ["schema_pack/*.json", "schema_pack/artifacts/*.json"]
+"packages.prompts" = ["challenge_specs/*.json"]
 
 [tool.ruff]
 line-length = 120

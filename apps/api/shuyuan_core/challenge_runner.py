@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 from uuid import uuid4
 
+from packages.prompts import load_challenge_library
+
 from .enums import ArtifactType
 from .extractors import YushiContext
 from .models import EvidenceRef
@@ -281,50 +283,33 @@ def _run_roundtable_blocking(ctx: YushiContext, spec: ChallengeSpec) -> dict[str
     )
 
 
-DEFAULT_TEST_LIBRARY: list[ChallengeSpec] = [
-    ChallengeSpec(
-        test_id="YU-CE-01",
-        category="counterexample",
-        severity_default="high",
-        estimated_cost=EstimatedCost(token=120, time_ms=40),
-        handler=_run_acceptance_testability,
-    ),
-    ChallengeSpec(
-        test_id="YU-CON-06",
-        category="constraint",
-        severity_default="high",
-        estimated_cost=EstimatedCost(token=140, time_ms=50),
-        handler=_run_deliverable_coverage,
-    ),
-    ChallengeSpec(
-        test_id="YU-COST-01",
-        category="cost",
-        severity_default="med",
-        estimated_cost=EstimatedCost(token=80, time_ms=20),
-        handler=_run_budget_pressure,
-    ),
-    ChallengeSpec(
-        test_id="YU-CG-01",
-        category="commit_gate",
-        severity_default="critical",
-        estimated_cost=EstimatedCost(token=60, time_ms=20),
-        handler=_run_commit_gate_snapshot,
-    ),
-    ChallengeSpec(
-        test_id="YU-FID-01",
-        category="fidelity",
-        severity_default="med",
-        estimated_cost=EstimatedCost(token=90, time_ms=30),
-        handler=_run_fidelity,
-    ),
-    ChallengeSpec(
-        test_id="YU-RT-01",
-        category="commit_gate",
-        severity_default="critical",
-        estimated_cost=EstimatedCost(token=70, time_ms=25),
-        handler=_run_roundtable_blocking,
-    ),
-]
+HANDLERS: dict[str, Callable[[YushiContext, ChallengeSpec], dict[str, Any]]] = {
+    "acceptance_testability": _run_acceptance_testability,
+    "deliverable_coverage": _run_deliverable_coverage,
+    "budget_pressure": _run_budget_pressure,
+    "commit_gate_snapshot": _run_commit_gate_snapshot,
+    "fidelity": _run_fidelity,
+    "roundtable_blocking": _run_roundtable_blocking,
+}
+
+
+def load_default_test_library() -> list[ChallengeSpec]:
+    return [
+        ChallengeSpec(
+            test_id=item["test_id"],
+            category=item["category"],
+            severity_default=item["severity_default"],
+            estimated_cost=EstimatedCost(
+                token=item["estimated_cost"]["token"],
+                time_ms=item["estimated_cost"]["time_ms"],
+            ),
+            handler=HANDLERS[item["handler"]],
+        )
+        for item in load_challenge_library()
+    ]
+
+
+DEFAULT_TEST_LIBRARY: list[ChallengeSpec] = load_default_test_library()
 
 
 def _decide_commit_gate(results: list[dict[str, Any]]) -> tuple[bool, str, list[str]]:

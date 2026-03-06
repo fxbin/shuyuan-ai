@@ -1,0 +1,44 @@
+[
+  {
+    "test_id": "YU-CE-01",
+    "category": "counterexample",
+    "severity_default": "high",
+    "estimated_cost": {"token": 120, "time_ms": 40},
+    "handler": "acceptance_testability"
+  },
+  {
+    "test_id": "YU-CON-06",
+    "category": "constraint",
+    "severity_default": "high",
+    "estimated_cost": {"token": 140, "time_ms": 50},
+    "handler": "deliverable_coverage"
+  },
+  {
+    "test_id": "YU-COST-01",
+    "category": "cost",
+    "severity_default": "med",
+    "estimated_cost": {"token": 80, "time_ms": 20},
+    "handler": "budget_pressure"
+  },
+  {
+    "test_id": "YU-CG-01",
+    "category": "commit_gate",
+    "severity_default": "critical",
+    "estimated_cost": {"token": 60, "time_ms": 20},
+    "handler": "commit_gate_snapshot"
+  },
+  {
+    "test_id": "YU-FID-01",
+    "category": "fidelity",
+    "severity_default": "med",
+    "estimated_cost": {"token": 90, "time_ms": 30},
+    "handler": "fidelity"
+  },
+  {
+    "test_id": "YU-RT-01",
+    "category": "commit_gate",
+    "severity_default": "critical",
+    "estimated_cost": {"token": 70, "time_ms": 25},
+    "handler": "roundtable_blocking"
+  }
+]
