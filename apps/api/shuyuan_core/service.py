@@ -12,6 +12,7 @@ from .coordination import CoordinationError, RunCoordinator, create_run_coordina
 from .enums import ArtifactType, EffectiveStatus, TaskMode, TaskState
 from .envelope import StrictEnvelope
 from .extractors import build_yushi_context
+from .object_store import ObjectStore, create_object_store
 from .models import (
     ChallengeReportBody,
     ExternalCommitReceiptBody,
@@ -34,9 +35,11 @@ class GovernanceService:
         self,
         store: GovernanceStore | None = None,
         coordinator: RunCoordinator | None = None,
+        object_store: ObjectStore | None = None,
     ) -> None:
         self.store = store or create_governance_store()
         self.coordinator = coordinator or create_run_coordinator()
+        self.object_store = object_store or create_object_store()
 
     def create_task(self, user_intent: str, trace_id: str | None = None) -> dict[str, Any]:
         task = self.store.create_task(user_intent=user_intent, trace_id=trace_id)
@@ -55,6 +58,7 @@ class GovernanceService:
                 envelope.header.task_id,
                 getattr(envelope.body, "request_idempotency_key", None),
             )
+        envelope = self._attach_object_store_refs(envelope)
 
         envelope = self._hydrate_artifact_identity(envelope)
         next_state = self._resolve_next_state(task.current_state, envelope)
@@ -99,9 +103,10 @@ class GovernanceService:
             with self.coordinator.hold(f"challenge:{task_id}", ttl_s=30):
                 envelope = self.generate_challenge_envelope(task_id)
                 submission = self.submit_envelope(envelope)
+                persisted = self.get_effective_artifact(task_id, ArtifactType.CHALLENGE_REPORT)
                 return {
                     "submission": submission.model_dump(mode="json"),
-                    "envelope": envelope,
+                    "envelope": persisted or envelope,
                 }
         except CoordinationError as exc:
             raise GovernanceError(str(exc)) from exc
@@ -116,9 +121,10 @@ class GovernanceService:
             with self.coordinator.hold(f"audit:{task_id}", ttl_s=30):
                 envelope = self.generate_audit_envelope(task_id)
                 submission = self.submit_envelope(envelope)
+                persisted = self.get_effective_artifact(task_id, ArtifactType.AUDIT_REPORT)
                 return {
                     "submission": submission.model_dump(mode="json"),
-                    "envelope": envelope,
+                    "envelope": persisted or envelope,
                 }
         except CoordinationError as exc:
             raise GovernanceError(str(exc)) from exc
@@ -384,6 +390,46 @@ class GovernanceService:
         if not isinstance(result, ResultBody):
             return False
         return result.side_effect_realized in {"external_write", "external_commit"}
+
+    def _attach_object_store_refs(self, envelope: StrictEnvelope) -> StrictEnvelope:
+        artifact_type = envelope.header.artifact_type
+        if artifact_type in {ArtifactType.EXTERNAL_COMMIT_RECEIPT, ArtifactType.PUBLISH_RECEIPT}:
+            body = envelope.body.model_copy(deep=True)
+            evidence_payload = {
+                "task_id": envelope.header.task_id,
+                "event_id": envelope.header.event_id,
+                "artifact_type": artifact_type.value,
+                "evidence": [item.model_dump(mode="json") for item in body.evidence],
+            }
+            stored = self.object_store.put_json(
+                f"tasks/{envelope.header.task_id}/receipts/{envelope.header.event_id}.json",
+                evidence_payload,
+            )
+            ext = dict(body.ext)
+            ext["evidence_bundle_ref"] = stored.uri
+            body.ext = ext
+            if not any(item.kind == "url" and item.ref == stored.uri for item in body.evidence):
+                body.evidence = [*body.evidence, body.evidence[0].model_copy(update={"kind": "url", "ref": stored.uri})]
+            return envelope.model_copy(update={"body": body})
+
+        if artifact_type == ArtifactType.AUDIT_REPORT:
+            body = envelope.body.model_copy(deep=True)
+            stored = self.object_store.put_json(
+                f"tasks/{envelope.header.task_id}/audits/{envelope.header.event_id}.json",
+                {
+                    "task_id": envelope.header.task_id,
+                    "event_id": envelope.header.event_id,
+                    "artifact_type": artifact_type.value,
+                    "findings": [item.model_dump(mode="json") for item in body.findings],
+                    "recommendations": list(body.recommendations),
+                },
+            )
+            ext = dict(body.ext)
+            ext["audit_bundle_ref"] = stored.uri
+            body.ext = ext
+            return envelope.model_copy(update={"body": body})
+
+        return envelope
 
     def _max_requested_side_effect(self, work_order: WorkOrderBody) -> str:
         requested = "none"
