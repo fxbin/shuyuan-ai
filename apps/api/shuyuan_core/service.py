@@ -18,7 +18,7 @@ from .models import (
     ReviewReportBody,
     WorkOrderBody,
 )
-from .store import ArtifactVersionRecord, InMemoryGovernanceStore, SubmissionResult
+from .store import GovernanceStore, SubmissionResult, create_governance_store
 
 
 class GovernanceError(ValueError):
@@ -26,8 +26,8 @@ class GovernanceError(ValueError):
 
 
 class GovernanceService:
-    def __init__(self, store: InMemoryGovernanceStore | None = None) -> None:
-        self.store = store or InMemoryGovernanceStore()
+    def __init__(self, store: GovernanceStore | None = None) -> None:
+        self.store = store or create_governance_store()
 
     def create_task(self, user_intent: str, trace_id: str | None = None) -> dict[str, Any]:
         task = self.store.create_task(user_intent=user_intent, trace_id=trace_id)
@@ -42,19 +42,7 @@ class GovernanceService:
         envelope = self._hydrate_artifact_identity(envelope)
         next_state = self._resolve_next_state(task.current_state, envelope)
 
-        self.store.add_event(envelope)
-        self.store.add_artifact_version(
-            ArtifactVersionRecord(
-                artifact_id=envelope.header.artifact_id or envelope.header.event_id,
-                task_id=envelope.header.task_id,
-                artifact_type=envelope.header.artifact_type,
-                version=envelope.header.version or 1,
-                effective_status=envelope.header.effective_status or EffectiveStatus.EFFECTIVE,
-                event_id=envelope.header.event_id,
-                envelope=envelope,
-            )
-        )
-        self.store.update_task_state(envelope.header.task_id, next_state)
+        self.store.persist_submission(envelope, next_state)
 
         return SubmissionResult(
             task_id=envelope.header.task_id,
@@ -67,7 +55,7 @@ class GovernanceService:
 
     def list_events(self, task_id: str) -> list[dict[str, Any]]:
         self.store.get_task(task_id)
-        return [event.envelope.model_dump(mode="json") for event in self.store.list_events(task_id)]
+        return [event.envelope.model_dump(mode="json", by_alias=True) for event in self.store.list_events(task_id)]
 
     def get_task(self, task_id: str) -> dict[str, Any]:
         return self.store.get_task(task_id).model_dump(mode="json")
@@ -77,7 +65,7 @@ class GovernanceService:
     ) -> dict[str, Any] | None:
         normalized = artifact_type if isinstance(artifact_type, ArtifactType) else ArtifactType(artifact_type)
         artifact = self.store.resolve_effective_artifact(task_id, normalized)
-        return artifact.envelope.model_dump(mode="json") if artifact else None
+        return artifact.envelope.model_dump(mode="json", by_alias=True) if artifact else None
 
     def archive_task(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
@@ -89,14 +77,16 @@ class GovernanceService:
 
     def _hydrate_artifact_identity(self, envelope: StrictEnvelope) -> StrictEnvelope:
         header = envelope.header
-        artifact_id = header.artifact_id or f"{header.artifact_type.value}-{uuid4().hex[:12]}"
-        version = header.version or self.store.next_version_for(artifact_id)
+        lineage = self.store.resolve_effective_artifact(header.task_id, header.artifact_type)
+        artifact_id = header.artifact_id or (lineage.artifact_id if lineage else f"{header.artifact_type.value}-{uuid4().hex[:12]}")
+        version = header.version or ((lineage.version + 1) if lineage and artifact_id == lineage.artifact_id else self.store.next_version_for(artifact_id))
         effective_status = header.effective_status or self._default_effective_status(envelope)
         updated_header = header.model_copy(
             update={
                 "artifact_id": artifact_id,
                 "version": version,
                 "effective_status": effective_status,
+                "parent_artifact_id": header.parent_artifact_id or (lineage.artifact_id if lineage else None),
             }
         )
         return envelope.model_copy(update={"header": updated_header})

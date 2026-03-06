@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Protocol
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
+from .config import Settings, get_settings
+from .db import create_session_factory, create_sync_engine
 from .enums import ArtifactType, EffectiveStatus, TaskState
 from .envelope import StrictEnvelope
 
@@ -50,12 +52,39 @@ class SubmissionResult(BaseModel):
     effective_status: EffectiveStatus
 
 
+class GovernanceStore(Protocol):
+    def ensure_schema(self) -> None: ...
+
+    def create_task(self, user_intent: str, trace_id: str | None = None) -> TaskRecord: ...
+
+    def get_task(self, task_id: str) -> TaskRecord: ...
+
+    def update_task_state(self, task_id: str, state: TaskState) -> TaskRecord: ...
+
+    def persist_submission(self, envelope: StrictEnvelope, next_state: TaskState) -> None: ...
+
+    def next_version_for(self, artifact_id: str) -> int: ...
+
+    def list_events(self, task_id: str) -> list[EventRecord]: ...
+
+    def get_event(self, event_id: str) -> EventRecord | None: ...
+
+    def resolve_effective_artifact(self, task_id: str, artifact_type: ArtifactType) -> ArtifactVersionRecord | None: ...
+
+    def get_artifact_version(self, artifact_id: str, version: int) -> ArtifactVersionRecord | None: ...
+
+    def latest_body(self, task_id: str, artifact_type: ArtifactType) -> Any | None: ...
+
+
 class InMemoryGovernanceStore:
     def __init__(self) -> None:
         self.tasks: dict[str, TaskRecord] = {}
         self.events_by_task: dict[str, list[EventRecord]] = {}
         self.artifact_versions: dict[str, list[ArtifactVersionRecord]] = {}
         self.event_index: dict[str, EventRecord] = {}
+
+    def ensure_schema(self) -> None:
+        return None
 
     def create_task(self, user_intent: str, trace_id: str | None = None) -> TaskRecord:
         task_id = f"T-{uuid4().hex[:12]}"
@@ -83,17 +112,35 @@ class InMemoryGovernanceStore:
             task.archived_at = datetime.now(timezone.utc)
         return task
 
-    def add_event(self, envelope: StrictEnvelope) -> EventRecord:
+    def persist_submission(self, envelope: StrictEnvelope, next_state: TaskState) -> None:
         event = EventRecord(envelope=envelope, stored_at=datetime.now(timezone.utc))
         self.events_by_task.setdefault(envelope.header.task_id, []).append(event)
         self.event_index[envelope.header.event_id] = event
-        return event
+        self._add_artifact_version(
+            ArtifactVersionRecord(
+                artifact_id=envelope.header.artifact_id or envelope.header.event_id,
+                task_id=envelope.header.task_id,
+                artifact_type=envelope.header.artifact_type,
+                version=envelope.header.version or 1,
+                effective_status=envelope.header.effective_status or EffectiveStatus.EFFECTIVE,
+                event_id=envelope.header.event_id,
+                envelope=envelope,
+            )
+        )
+        self.update_task_state(envelope.header.task_id, next_state)
 
-    def add_artifact_version(self, record: ArtifactVersionRecord) -> None:
+    def _add_artifact_version(self, record: ArtifactVersionRecord) -> None:
+        for versions in self.artifact_versions.values():
+            for existing in versions:
+                if (
+                    existing.task_id == record.task_id
+                    and existing.artifact_type == record.artifact_type
+                    and existing.effective_status in ACTIVE_EFFECTIVE_STATUSES
+                    and record.effective_status in ACTIVE_EFFECTIVE_STATUSES
+                ):
+                    existing.effective_status = EffectiveStatus.SUPERSEDED
+
         versions = self.artifact_versions.setdefault(record.artifact_id, [])
-        for existing in versions:
-            if existing.effective_status == EffectiveStatus.EFFECTIVE and record.effective_status == EffectiveStatus.EFFECTIVE:
-                existing.effective_status = EffectiveStatus.SUPERSEDED
         versions.append(record)
         versions.sort(key=lambda item: item.version)
 
@@ -107,30 +154,18 @@ class InMemoryGovernanceStore:
     def get_event(self, event_id: str) -> EventRecord | None:
         return self.event_index.get(event_id)
 
-    def resolve_effective_artifact(
-        self, task_id: str, artifact_type: ArtifactType
-    ) -> ArtifactVersionRecord | None:
+    def resolve_effective_artifact(self, task_id: str, artifact_type: ArtifactType) -> ArtifactVersionRecord | None:
         candidates: list[ArtifactVersionRecord] = []
         for versions in self.artifact_versions.values():
             for version in versions:
                 if (
                     version.task_id == task_id
                     and version.artifact_type == artifact_type
-                    and version.effective_status
-                    in {
-                        EffectiveStatus.EFFECTIVE,
-                        EffectiveStatus.APPROVED,
-                        EffectiveStatus.SUBMITTED,
-                    }
+                    and version.effective_status in ACTIVE_EFFECTIVE_STATUSES
                 ):
                     candidates.append(version)
-        priority = {
-            EffectiveStatus.EFFECTIVE: 3,
-            EffectiveStatus.APPROVED: 2,
-            EffectiveStatus.SUBMITTED: 1,
-        }
         candidates.sort(
-            key=lambda item: (priority.get(item.effective_status, 0), item.version),
+            key=lambda item: (ACTIVE_EFFECTIVE_PRIORITY.get(item.effective_status, 0), item.version),
             reverse=True,
         )
         return candidates[0] if candidates else None
@@ -144,3 +179,27 @@ class InMemoryGovernanceStore:
     def latest_body(self, task_id: str, artifact_type: ArtifactType) -> Any | None:
         artifact = self.resolve_effective_artifact(task_id, artifact_type)
         return artifact.envelope.body if artifact else None
+
+
+ACTIVE_EFFECTIVE_STATUSES = {
+    EffectiveStatus.EFFECTIVE,
+    EffectiveStatus.APPROVED,
+    EffectiveStatus.SUBMITTED,
+}
+
+ACTIVE_EFFECTIVE_PRIORITY = {
+    EffectiveStatus.EFFECTIVE: 3,
+    EffectiveStatus.APPROVED: 2,
+    EffectiveStatus.SUBMITTED: 1,
+}
+
+
+def create_governance_store(settings: Settings | None = None) -> GovernanceStore:
+    from .persistence.repository import SQLAlchemyGovernanceStore
+
+    resolved = settings or get_settings()
+    if resolved.repository_mode == "postgres":
+        engine = create_sync_engine(resolved.database_url)
+        session_factory = create_session_factory(engine)
+        return SQLAlchemyGovernanceStore(engine=engine, session_factory=session_factory)
+    return InMemoryGovernanceStore()

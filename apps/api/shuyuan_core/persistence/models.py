@@ -19,6 +19,8 @@ class TaskModel(Base):
     initial_lane: Mapped[str | None] = mapped_column(String(16), nullable=True)
     initial_level: Mapped[str | None] = mapped_column(String(8), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="open")
+    current_state: Mapped[str] = mapped_column(String(32), default="created", index=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class EventModel(Base):

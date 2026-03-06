@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "ShuYuanAI Governance Core"
     app_version: str = "0.1.0"
-    repository_mode: str = "memory"
+    repository_mode: str = Field(default="memory", alias="REPOSITORY_MODE")
     database_url: str = Field(
         default="postgresql+psycopg://shuyuan:shuyuan@localhost:5432/shuyuan",
         alias="DATABASE_URL",

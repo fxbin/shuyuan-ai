@@ -55,7 +55,8 @@ services:
       dockerfile: infra/docker/Dockerfile.api
     container_name: shuyuan-api
     environment:
-      DATABASE_URL: postgresql+asyncpg://shuyuan:shuyuan_secret@postgres:5432/shuyuan_governance
+      REPOSITORY_MODE: postgres
+      DATABASE_URL: postgresql+psycopg://shuyuan:shuyuan_secret@postgres:5432/shuyuan_governance
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
