@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     object_store_mode: str = Field(default="local", alias="OBJECT_STORE_MODE")
     object_store_endpoint: str = Field(default="http://localhost:9000", alias="MINIO_ENDPOINT")
     object_store_bucket: str = "shuyuan-artifacts"
+    object_store_region: str = Field(default="us-east-1", alias="MINIO_REGION")
     object_store_access_key: str = Field(default="minioadmin", alias="MINIO_ACCESS_KEY")
     object_store_secret_key: str = Field(default="minioadmin", alias="MINIO_SECRET_KEY")
     object_store_secure: bool = Field(default=False, alias="MINIO_SECURE")

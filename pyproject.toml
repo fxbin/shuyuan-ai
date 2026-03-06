@@ -9,6 +9,7 @@ description = "ShuYuanAI v2.0 governance-first contract kernel"
 requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.18.0",
+  "boto3>=1.37.0",
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",
   "pydantic>=2.10.0",
