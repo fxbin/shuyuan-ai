@@ -303,6 +303,7 @@ class SQLAlchemyGovernanceStore:
             if isinstance(body, ExternalCommitReceiptBody):
                 target_system = body.target_system
                 target_action = body.target_action
+                request_idempotency_key = body.request_idempotency_key
                 approval_digest = body.approval_binding_digest
                 request_digest = body.request_digest
                 status = body.status
@@ -313,6 +314,7 @@ class SQLAlchemyGovernanceStore:
                 assert isinstance(body, PublishReceiptBody)
                 target_system = body.target_platform
                 target_action = body.publish_type
+                request_idempotency_key = body.request_idempotency_key
                 approval_digest = body.approval_binding_digest
                 request_digest = body.request_digest
                 status = body.status
@@ -326,6 +328,7 @@ class SQLAlchemyGovernanceStore:
                     task_id=envelope.header.task_id,
                     event_id=envelope.header.event_id,
                     artifact_type=envelope.header.artifact_type.value,
+                    request_idempotency_key=request_idempotency_key,
                     request_digest=request_digest,
                     approval_digest=approval_digest,
                     target_system=target_system,

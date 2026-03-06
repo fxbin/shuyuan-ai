@@ -159,6 +159,7 @@ class ExternalActionReceiptModel(Base):
     task_id: Mapped[str] = mapped_column(String(64), index=True)
     event_id: Mapped[str] = mapped_column(String(64), index=True)
     artifact_type: Mapped[str] = mapped_column(String(64))
+    request_idempotency_key: Mapped[str] = mapped_column(String(128))
     request_digest: Mapped[str] = mapped_column(String(256))
     approval_digest: Mapped[str] = mapped_column(String(256))
     target_system: Mapped[str] = mapped_column(String(128))
@@ -171,4 +172,5 @@ class ExternalActionReceiptModel(Base):
 
     __table_args__ = (
         Index("idx_receipts_digest", "request_digest", "approval_digest"),
+        Index("idx_receipts_task_idempotency", "task_id", "request_idempotency_key", unique=True),
     )

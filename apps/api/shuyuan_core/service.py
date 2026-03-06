@@ -41,6 +41,14 @@ class GovernanceService:
         task = self.store.get_task(envelope.header.task_id)
         if task.trace_id != envelope.header.trace_id:
             raise GovernanceError("trace_id does not match task")
+        if envelope.header.artifact_type in {
+            ArtifactType.EXTERNAL_COMMIT_RECEIPT,
+            ArtifactType.PUBLISH_RECEIPT,
+        }:
+            self._validate_receipt_idempotency(
+                envelope.header.task_id,
+                getattr(envelope.body, "request_idempotency_key", None),
+            )
 
         envelope = self._hydrate_artifact_identity(envelope)
         next_state = self._resolve_next_state(task.current_state, envelope)
@@ -329,6 +337,18 @@ class GovernanceService:
             raise GovernanceError("receipt approval_binding_digest does not match review_report")
         if challenge.overall.commit_gate != receipt.commit_gate_snapshot:
             raise GovernanceError("receipt commit_gate_snapshot must match latest challenge_report")
+
+    def _validate_receipt_idempotency(self, task_id: str, request_idempotency_key: str | None) -> None:
+        if not request_idempotency_key:
+            return
+        for event in self.store.list_events(task_id):
+            if event.envelope.header.artifact_type not in {
+                ArtifactType.EXTERNAL_COMMIT_RECEIPT,
+                ArtifactType.PUBLISH_RECEIPT,
+            }:
+                continue
+            if getattr(event.envelope.body, "request_idempotency_key", None) == request_idempotency_key:
+                raise GovernanceError("duplicate request_idempotency_key for receipt")
 
     def _validate_archive_readiness(self, task_id: str) -> None:
         events = self.store.list_events(task_id)
