@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from .audit_runner import build_audit_envelope
 from .challenge_runner import build_challenge_envelope
+from .coordination import CoordinationError, RunCoordinator, create_run_coordinator
 from .enums import ArtifactType, EffectiveStatus, TaskMode, TaskState
 from .envelope import StrictEnvelope
 from .extractors import build_yushi_context
@@ -29,8 +30,13 @@ class GovernanceError(ValueError):
 
 
 class GovernanceService:
-    def __init__(self, store: GovernanceStore | None = None) -> None:
+    def __init__(
+        self,
+        store: GovernanceStore | None = None,
+        coordinator: RunCoordinator | None = None,
+    ) -> None:
         self.store = store or create_governance_store()
+        self.coordinator = coordinator or create_run_coordinator()
 
     def create_task(self, user_intent: str, trace_id: str | None = None) -> dict[str, Any]:
         task = self.store.create_task(user_intent=user_intent, trace_id=trace_id)
@@ -89,12 +95,16 @@ class GovernanceService:
         return build_challenge_envelope(context)
 
     def run_challenge(self, task_id: str) -> dict[str, Any]:
-        envelope = self.generate_challenge_envelope(task_id)
-        submission = self.submit_envelope(envelope)
-        return {
-            "submission": submission.model_dump(mode="json"),
-            "envelope": envelope,
-        }
+        try:
+            with self.coordinator.hold(f"challenge:{task_id}", ttl_s=30):
+                envelope = self.generate_challenge_envelope(task_id)
+                submission = self.submit_envelope(envelope)
+                return {
+                    "submission": submission.model_dump(mode="json"),
+                    "envelope": envelope,
+                }
+        except CoordinationError as exc:
+            raise GovernanceError(str(exc)) from exc
 
     def generate_audit_envelope(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
@@ -102,12 +112,16 @@ class GovernanceService:
         return build_audit_envelope(context)
 
     def run_audit(self, task_id: str) -> dict[str, Any]:
-        envelope = self.generate_audit_envelope(task_id)
-        submission = self.submit_envelope(envelope)
-        return {
-            "submission": submission.model_dump(mode="json"),
-            "envelope": envelope,
-        }
+        try:
+            with self.coordinator.hold(f"audit:{task_id}", ttl_s=30):
+                envelope = self.generate_audit_envelope(task_id)
+                submission = self.submit_envelope(envelope)
+                return {
+                    "submission": submission.model_dump(mode="json"),
+                    "envelope": envelope,
+                }
+        except CoordinationError as exc:
+            raise GovernanceError(str(exc)) from exc
 
     def archive_task(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
