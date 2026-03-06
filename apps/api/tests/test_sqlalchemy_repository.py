@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from apps.api.shuyuan_core.db import create_session_factory, create_sync_engine
+from apps.api.shuyuan_core.migrations import upgrade_database
 from apps.api.shuyuan_core.persistence.repository import SQLAlchemyGovernanceStore
 from apps.api.shuyuan_core.service import GovernanceService
 from apps.api.tests.test_governance_service import make_envelope, submit_happy_path_setup
@@ -10,10 +11,11 @@ from apps.api.tests.test_governance_service import make_envelope, submit_happy_p
 
 def create_sqlite_service(tmp_path) -> GovernanceService:
     db_file = tmp_path / "governance.db"
-    engine = create_sync_engine(f"sqlite+pysqlite:///{db_file}")
+    database_url = f"sqlite+pysqlite:///{db_file}"
+    upgrade_database(database_url=database_url)
+    engine = create_sync_engine(database_url)
     session_factory = create_session_factory(engine)
     store = SQLAlchemyGovernanceStore(engine=engine, session_factory=session_factory)
-    store.ensure_schema()
     return GovernanceService(store=store)
 
 

@@ -7,7 +7,6 @@ from uuid import uuid4
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from ..db import Base
 from ..enums import ArtifactType, EffectiveStatus, TaskState
 from ..envelope import StrictEnvelope
 from ..models import (
@@ -44,7 +43,7 @@ class SQLAlchemyGovernanceStore:
         self.session_factory = session_factory
 
     def ensure_schema(self) -> None:
-        Base.metadata.create_all(self.engine)
+        return None
 
     def create_task(self, user_intent: str, trace_id: str | None = None) -> TaskRecord:
         task_id = f"T-{uuid4().hex[:12]}"

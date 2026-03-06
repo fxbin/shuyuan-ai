@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from contextlib import asynccontextmanager
-
 from fastapi import APIRouter, FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -21,13 +19,7 @@ class CreateTaskRequest(BaseModel):
 def create_app(service: GovernanceService | None = None) -> FastAPI:
     settings = get_settings()
     svc = service or GovernanceService()
-
-    @asynccontextmanager
-    async def lifespan(_: FastAPI):
-        svc.store.ensure_schema()
-        yield
-
-    app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
+    app = FastAPI(title=settings.app_name, version=settings.app_version)
     router = APIRouter(prefix="/api/v2")
 
     @app.get("/health")
