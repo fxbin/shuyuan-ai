@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemas": [
+    {
+      "description": "Strict governance envelope bound by artifact_type and stage",
+      "kind": "envelope",
+      "name": "strict_envelope",
+      "path": "strict_envelope.json"
+    },
+    {
+      "description": "agenda body schema",
+      "kind": "artifact_body",
+      "name": "agenda",
+      "path": "artifacts/agenda.json"
+    },
+    {
+      "description": "audit_report body schema",
+      "kind": "artifact_body",
+      "name": "audit_report",
+      "path": "artifacts/audit_report.json"
+    },
+    {
+      "description": "budget_event body schema",
+      "kind": "artifact_body",
+      "name": "budget_event",
+      "path": "artifacts/budget_event.json"
+    },
+    {
+      "description": "budget_request body schema",
+      "kind": "artifact_body",
+      "name": "budget_request",
+      "path": "artifacts/budget_request.json"
+    },
+    {
+      "description": "challenge_report body schema",
+      "kind": "artifact_body",
+      "name": "challenge_report",
+      "path": "artifacts/challenge_report.json"
+    },
+    {
+      "description": "experiment_plan body schema",
+      "kind": "artifact_body",
+      "name": "experiment_plan",
+      "path": "artifacts/experiment_plan.json"
+    },
+    {
+      "description": "external_commit_receipt body schema",
+      "kind": "artifact_body",
+      "name": "external_commit_receipt",
+      "path": "artifacts/external_commit_receipt.json"
+    },
+    {
+      "description": "final_report body schema",
+      "kind": "artifact_body",
+      "name": "final_report",
+      "path": "artifacts/final_report.json"
+    },
+    {
+      "description": "governance_snapshot body schema",
+      "kind": "artifact_body",
+      "name": "governance_snapshot",
+      "path": "artifacts/governance_snapshot.json"
+    },
+    {
+      "description": "plan body schema",
+      "kind": "artifact_body",
+      "name": "plan",
+      "path": "artifacts/plan.json"
+    },
+    {
+      "description": "policy_decision body schema",
+      "kind": "artifact_body",
+      "name": "policy_decision",
+      "path": "artifacts/policy_decision.json"
+    },
+    {
+      "description": "publish_receipt body schema",
+      "kind": "artifact_body",
+      "name": "publish_receipt",
+      "path": "artifacts/publish_receipt.json"
+    },
+    {
+      "description": "result body schema",
+      "kind": "artifact_body",
+      "name": "result",
+      "path": "artifacts/result.json"
+    },
+    {
+      "description": "review_report body schema",
+      "kind": "artifact_body",
+      "name": "review_report",
+      "path": "artifacts/review_report.json"
+    },
+    {
+      "description": "round_summary body schema",
+      "kind": "artifact_body",
+      "name": "round_summary",
+      "path": "artifacts/round_summary.json"
+    },
+    {
+      "description": "task_profile body schema",
+      "kind": "artifact_body",
+      "name": "task_profile",
+      "path": "artifacts/task_profile.json"
+    },
+    {
+      "description": "work_order body schema",
+      "kind": "artifact_body",
+      "name": "work_order",
+      "path": "artifacts/work_order.json"
+    }
+  ]
+}

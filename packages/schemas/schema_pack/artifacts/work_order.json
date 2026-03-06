@@ -1,0 +1,213 @@
+{
+  "$defs": {
+    "ArtifactType": {
+      "enum": [
+        "task_profile",
+        "policy_decision",
+        "budget_event",
+        "budget_request",
+        "plan",
+        "review_report",
+        "work_order",
+        "result",
+        "challenge_report",
+        "agenda",
+        "round_summary",
+        "final_report",
+        "audit_report",
+        "experiment_plan",
+        "governance_snapshot",
+        "external_commit_receipt",
+        "publish_receipt"
+      ],
+      "title": "ArtifactType",
+      "type": "string"
+    },
+    "BudgetSlice": {
+      "additionalProperties": false,
+      "properties": {
+        "time_cap_s": {
+          "minimum": 0,
+          "title": "Time Cap S",
+          "type": "integer"
+        },
+        "token_cap": {
+          "minimum": 0,
+          "title": "Token Cap",
+          "type": "integer"
+        },
+        "tool_cap": {
+          "minimum": 0,
+          "title": "Tool Cap",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_cap",
+        "time_cap_s",
+        "tool_cap"
+      ],
+      "title": "BudgetSlice",
+      "type": "object"
+    },
+    "Schedule": {
+      "additionalProperties": false,
+      "properties": {
+        "deadline": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "priority": {
+          "enum": [
+            "P0",
+            "P1",
+            "P2"
+          ],
+          "title": "Priority",
+          "type": "string"
+        }
+      },
+      "required": [
+        "priority"
+      ],
+      "title": "Schedule",
+      "type": "object"
+    },
+    "WorkInputRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_type": {
+          "$ref": "#/$defs/ArtifactType"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "event_id",
+        "artifact_type"
+      ],
+      "title": "WorkInputRef",
+      "type": "object"
+    },
+    "WorkItem": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Acceptance",
+          "type": "array"
+        },
+        "budget_slice": {
+          "$ref": "#/$defs/BudgetSlice"
+        },
+        "commit_targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Commit Targets",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "input_refs": {
+          "items": {
+            "$ref": "#/$defs/WorkInputRef"
+          },
+          "minItems": 1,
+          "title": "Input Refs",
+          "type": "array"
+        },
+        "instructions": {
+          "title": "Instructions",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        },
+        "rollback_plan": {
+          "title": "Rollback Plan",
+          "type": "string"
+        },
+        "side_effect_level": {
+          "enum": [
+            "none",
+            "read_only",
+            "internal_write",
+            "external_write",
+            "external_commit"
+          ],
+          "title": "Side Effect Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "owner",
+        "input_refs",
+        "instructions",
+        "acceptance",
+        "budget_slice",
+        "side_effect_level",
+        "rollback_plan"
+      ],
+      "title": "WorkItem",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/work_order.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "schedule": {
+      "$ref": "#/$defs/Schedule"
+    },
+    "work_items": {
+      "items": {
+        "$ref": "#/$defs/WorkItem"
+      },
+      "minItems": 1,
+      "title": "Work Items",
+      "type": "array"
+    }
+  },
+  "required": [
+    "work_items",
+    "schedule"
+  ],
+  "title": "WorkOrderBody",
+  "type": "object"
+}

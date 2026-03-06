@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "AuditFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "med",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "severity",
+        "description"
+      ],
+      "title": "AuditFinding",
+      "type": "object"
+    },
+    "EvidenceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "json_pointer": {
+          "title": "Json Pointer",
+          "type": "string"
+        },
+        "ref_event_id": {
+          "title": "Ref Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_event_id",
+        "json_pointer"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/audit_report.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/AuditFinding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "recommendations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Recommendations",
+      "type": "array"
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "pass_with_risks",
+        "fail"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    }
+  },
+  "required": [
+    "verdict",
+    "findings",
+    "recommendations"
+  ],
+  "title": "AuditReportBody",
+  "type": "object"
+}

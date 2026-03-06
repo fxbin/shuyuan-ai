@@ -1,0 +1,299 @@
+{
+  "$defs": {
+    "CommitReadiness": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Blocking Reasons",
+          "type": "array"
+        },
+        "ready": {
+          "title": "Ready",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ready",
+        "blocking_reasons"
+      ],
+      "title": "CommitReadiness",
+      "type": "object"
+    },
+    "ExplorationOption": {
+      "additionalProperties": false,
+      "properties": {
+        "fit_for": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fit For",
+          "type": "array"
+        },
+        "option": {
+          "title": "Option",
+          "type": "string"
+        },
+        "risks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Risks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "option",
+        "fit_for",
+        "risks"
+      ],
+      "title": "ExplorationOption",
+      "type": "object"
+    },
+    "ExplorationOutcome": {
+      "additionalProperties": false,
+      "properties": {
+        "hypotheses_rejected": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hypotheses Rejected",
+          "type": "array"
+        },
+        "negative_findings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Negative Findings",
+          "type": "array"
+        },
+        "questions_resolved": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Questions Resolved",
+          "type": "array"
+        },
+        "recommended_next_step": {
+          "title": "Recommended Next Step",
+          "type": "string"
+        },
+        "viable_options": {
+          "items": {
+            "$ref": "#/$defs/ExplorationOption"
+          },
+          "title": "Viable Options",
+          "type": "array"
+        }
+      },
+      "required": [
+        "questions_resolved",
+        "hypotheses_rejected",
+        "viable_options",
+        "negative_findings",
+        "recommended_next_step"
+      ],
+      "title": "ExplorationOutcome",
+      "type": "object"
+    },
+    "ResultOutput": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "content_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Hash"
+        },
+        "content_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Ref"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "md",
+            "json",
+            "code",
+            "link",
+            "other"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "content"
+      ],
+      "title": "ResultOutput",
+      "type": "object"
+    },
+    "SelfCheckItem": {
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "title": "Check",
+          "type": "string"
+        },
+        "notes": {
+          "title": "Notes",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "check",
+        "status",
+        "notes"
+      ],
+      "title": "SelfCheckItem",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/result.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "commit_readiness": {
+      "$ref": "#/$defs/CommitReadiness"
+    },
+    "executed_actions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Executed Actions",
+      "type": "array"
+    },
+    "expected_receipt_type": {
+      "anyOf": [
+        {
+          "enum": [
+            "external_commit_receipt",
+            "publish_receipt"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expected Receipt Type"
+    },
+    "exploration_outcome": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExplorationOutcome"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "failed_self_check": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Failed Self Check",
+      "type": "array"
+    },
+    "known_limits": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Limits",
+      "type": "array"
+    },
+    "next_steps": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Next Steps",
+      "type": "array"
+    },
+    "outputs": {
+      "items": {
+        "$ref": "#/$defs/ResultOutput"
+      },
+      "minItems": 1,
+      "title": "Outputs",
+      "type": "array"
+    },
+    "pending_commit_targets": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Pending Commit Targets",
+      "type": "array"
+    },
+    "self_check": {
+      "items": {
+        "$ref": "#/$defs/SelfCheckItem"
+      },
+      "title": "Self Check",
+      "type": "array"
+    },
+    "side_effect_realized": {
+      "enum": [
+        "none",
+        "read_only",
+        "internal_write",
+        "external_write",
+        "external_commit"
+      ],
+      "title": "Side Effect Realized",
+      "type": "string"
+    }
+  },
+  "required": [
+    "outputs",
+    "self_check",
+    "known_limits",
+    "failed_self_check",
+    "executed_actions",
+    "side_effect_realized",
+    "commit_readiness",
+    "next_steps"
+  ],
+  "title": "ResultBody",
+  "type": "object"
+}

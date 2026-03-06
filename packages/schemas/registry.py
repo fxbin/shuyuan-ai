@@ -1,45 +1,41 @@
 from __future__ import annotations
 
+import json
+from importlib import resources
 from typing import Any
 
-from apps.api.shuyuan_core.enums import ArtifactType
-from apps.api.shuyuan_core.envelope import StrictEnvelope
-from apps.api.shuyuan_core.models import ARTIFACT_BODY_MODELS
+SCHEMA_PACKAGE = "packages.schemas"
+SCHEMA_PACK_DIR = "schema_pack"
+CATALOG_FILE = "catalog.json"
 
 
-def artifact_schema_names() -> list[str]:
-    return sorted(artifact_type.value for artifact_type in ARTIFACT_BODY_MODELS)
+def _schema_pack_root():
+    return resources.files(SCHEMA_PACKAGE).joinpath(SCHEMA_PACK_DIR)
 
 
-def get_artifact_schema(artifact_type: ArtifactType | str) -> dict[str, Any]:
-    normalized = artifact_type if isinstance(artifact_type, ArtifactType) else ArtifactType(artifact_type)
-    return ARTIFACT_BODY_MODELS[normalized].model_json_schema()
-
-
-def build_strict_envelope_schema() -> dict[str, Any]:
-    return StrictEnvelope.model_json_schema()
+def _load_json(relative_path: str) -> dict[str, Any]:
+    resource = _schema_pack_root().joinpath(relative_path)
+    return json.loads(resource.read_text(encoding="utf-8"))
 
 
 def list_schema_catalog() -> list[dict[str, str]]:
-    catalog = [
-        {
-            "name": "strict_envelope",
-            "kind": "envelope",
-            "description": "Strict governance envelope bound by artifact_type and stage",
-        }
-    ]
-    for artifact_type in sorted(ARTIFACT_BODY_MODELS, key=lambda item: item.value):
-        catalog.append(
-            {
-                "name": artifact_type.value,
-                "kind": "artifact_body",
-                "description": f"{artifact_type.value} body schema",
-            }
-        )
-    return catalog
+    return _load_json(CATALOG_FILE)["schemas"]
+
+
+def artifact_schema_names() -> list[str]:
+    return sorted(item["name"] for item in list_schema_catalog() if item["kind"] == "artifact_body")
+
+
+def get_artifact_schema(artifact_type: str) -> dict[str, Any]:
+    return get_named_schema(str(artifact_type))
+
+
+def build_strict_envelope_schema() -> dict[str, Any]:
+    return get_named_schema("strict_envelope")
 
 
 def get_named_schema(name: str) -> dict[str, Any]:
-    if name == "strict_envelope":
-        return build_strict_envelope_schema()
-    return get_artifact_schema(name)
+    for item in list_schema_catalog():
+        if item["name"] == name:
+            return _load_json(item["path"])
+    raise KeyError(name)

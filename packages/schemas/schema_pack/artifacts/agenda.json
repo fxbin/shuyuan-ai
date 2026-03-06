@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "ParticipantRole": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "role": {
+          "enum": [
+            "proposer",
+            "adversary",
+            "synthesizer",
+            "guardian"
+          ],
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "domain",
+        "required"
+      ],
+      "title": "ParticipantRole",
+      "type": "object"
+    },
+    "StoppingRule": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_majority_fallback": {
+          "title": "Allow Majority Fallback",
+          "type": "boolean"
+        },
+        "convergence_threshold": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Convergence Threshold",
+          "type": "number"
+        },
+        "max_rounds": {
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Max Rounds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_rounds",
+        "convergence_threshold",
+        "allow_majority_fallback"
+      ],
+      "title": "StoppingRule",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/agenda.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "decision_axes": {
+      "items": {
+        "enum": [
+          "speed_vs_accuracy",
+          "cost_vs_safety",
+          "compliance_vs_coverage",
+          "other"
+        ],
+        "type": "string"
+      },
+      "title": "Decision Axes",
+      "type": "array"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "forbid_majority_override_on": {
+      "items": {
+        "enum": [
+          "policy",
+          "capability",
+          "compliance",
+          "external_side_effect"
+        ],
+        "type": "string"
+      },
+      "title": "Forbid Majority Override On",
+      "type": "array"
+    },
+    "participant_roles": {
+      "items": {
+        "$ref": "#/$defs/ParticipantRole"
+      },
+      "maxItems": 7,
+      "minItems": 3,
+      "title": "Participant Roles",
+      "type": "array"
+    },
+    "stopping_rule": {
+      "$ref": "#/$defs/StoppingRule"
+    },
+    "topic": {
+      "title": "Topic",
+      "type": "string"
+    }
+  },
+  "required": [
+    "topic",
+    "participant_roles",
+    "decision_axes",
+    "stopping_rule",
+    "forbid_majority_override_on"
+  ],
+  "title": "AgendaBody",
+  "type": "object"
+}

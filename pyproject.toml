@@ -38,6 +38,9 @@ markers = [
 where = ["."]
 include = ["apps*", "packages*"]
 
+[tool.setuptools.package-data]
+"packages.schemas" = ["schema_pack/*.json", "schema_pack/artifacts/*.json"]
+
 [tool.ruff]
 line-length = 120
 target-version = "py312"

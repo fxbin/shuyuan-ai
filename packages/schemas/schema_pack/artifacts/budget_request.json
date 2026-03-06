@@ -1,0 +1,120 @@
+{
+  "$defs": {
+    "BudgetCurrent": {
+      "additionalProperties": false,
+      "properties": {
+        "time_cap_s": {
+          "minimum": 0,
+          "title": "Time Cap S",
+          "type": "integer"
+        },
+        "token_cap": {
+          "minimum": 0,
+          "title": "Token Cap",
+          "type": "integer"
+        },
+        "token_used": {
+          "minimum": 0,
+          "title": "Token Used",
+          "type": "integer"
+        },
+        "tool_cap": {
+          "minimum": 0,
+          "title": "Tool Cap",
+          "type": "integer"
+        },
+        "tool_used": {
+          "minimum": 0,
+          "title": "Tool Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_cap",
+        "token_used",
+        "time_cap_s",
+        "tool_cap",
+        "tool_used"
+      ],
+      "title": "BudgetCurrent",
+      "type": "object"
+    },
+    "BudgetRequested": {
+      "additionalProperties": false,
+      "properties": {
+        "time_add_s": {
+          "minimum": 0,
+          "title": "Time Add S",
+          "type": "integer"
+        },
+        "token_add": {
+          "minimum": 0,
+          "title": "Token Add",
+          "type": "integer"
+        },
+        "tool_add": {
+          "minimum": 0,
+          "title": "Tool Add",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_add",
+        "time_add_s",
+        "tool_add"
+      ],
+      "title": "BudgetRequested",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/budget_request.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "alternatives_tried": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Alternatives Tried",
+      "type": "array"
+    },
+    "current_budget": {
+      "$ref": "#/$defs/BudgetCurrent"
+    },
+    "expected_value": {
+      "title": "Expected Value",
+      "type": "string"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "requested_budget": {
+      "$ref": "#/$defs/BudgetRequested"
+    },
+    "urgency": {
+      "enum": [
+        "low",
+        "med",
+        "high"
+      ],
+      "title": "Urgency",
+      "type": "string"
+    }
+  },
+  "required": [
+    "reason",
+    "current_budget",
+    "requested_budget",
+    "alternatives_tried",
+    "expected_value",
+    "urgency"
+  ],
+  "title": "BudgetRequestBody",
+  "type": "object"
+}

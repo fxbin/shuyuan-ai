@@ -1,0 +1,193 @@
+{
+  "$defs": {
+    "ApprovalBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_digest": {
+          "title": "Approval Digest",
+          "type": "string"
+        },
+        "approval_scope": {
+          "title": "Approval Scope",
+          "type": "string"
+        },
+        "approved_at": {
+          "format": "date-time",
+          "title": "Approved At",
+          "type": "string"
+        },
+        "approved_by": {
+          "title": "Approved By",
+          "type": "string"
+        },
+        "artifact_id": {
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "version",
+        "approval_digest",
+        "approved_by",
+        "approved_at",
+        "approval_scope"
+      ],
+      "title": "ApprovalBinding",
+      "type": "object"
+    },
+    "EvidenceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "json_pointer": {
+          "title": "Json Pointer",
+          "type": "string"
+        },
+        "ref_event_id": {
+          "title": "Ref Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_event_id",
+        "json_pointer"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "LaneSuggestion": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "suggested_level": {
+          "enum": [
+            "L0",
+            "L1",
+            "L2",
+            "L3"
+          ],
+          "title": "Suggested Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "suggested_level",
+        "reason"
+      ],
+      "title": "LaneSuggestion",
+      "type": "object"
+    },
+    "ReviewIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "fix_required": {
+          "title": "Fix Required",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "med",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "quality",
+            "risk",
+            "cost",
+            "policy"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "severity",
+        "description",
+        "evidence",
+        "fix_required"
+      ],
+      "title": "ReviewIssue",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/review_report.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approval_binding": {
+      "$ref": "#/$defs/ApprovalBinding"
+    },
+    "conditions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Conditions",
+      "type": "array"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "issues": {
+      "items": {
+        "$ref": "#/$defs/ReviewIssue"
+      },
+      "title": "Issues",
+      "type": "array"
+    },
+    "lane_suggestion": {
+      "$ref": "#/$defs/LaneSuggestion"
+    },
+    "verdict": {
+      "enum": [
+        "approve",
+        "reject",
+        "approve_with_conditions",
+        "escalate_to_round"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    }
+  },
+  "required": [
+    "verdict",
+    "issues",
+    "conditions",
+    "lane_suggestion",
+    "approval_binding"
+  ],
+  "title": "ReviewReportBody",
+  "type": "object"
+}

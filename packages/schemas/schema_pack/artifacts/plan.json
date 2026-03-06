@@ -1,0 +1,212 @@
+{
+  "$defs": {
+    "ConstraintItem": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "hard",
+            "soft"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "title": "ConstraintItem",
+      "type": "object"
+    },
+    "DeliverableItem": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "enum": [
+            "md",
+            "json",
+            "code",
+            "ppt",
+            "doc",
+            "link",
+            "other"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "format",
+        "owner"
+      ],
+      "title": "DeliverableItem",
+      "type": "object"
+    },
+    "RiskItem": {
+      "additionalProperties": false,
+      "properties": {
+        "mitigation": {
+          "title": "Mitigation",
+          "type": "string"
+        },
+        "risk": {
+          "title": "Risk",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "med",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "risk",
+        "severity",
+        "mitigation"
+      ],
+      "title": "RiskItem",
+      "type": "object"
+    },
+    "TaskBreakdownItem": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Acceptance",
+          "type": "array"
+        },
+        "deps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deps",
+          "type": "array"
+        },
+        "desc": {
+          "title": "Desc",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "desc",
+        "owner",
+        "deps",
+        "acceptance"
+      ],
+      "title": "TaskBreakdownItem",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/plan.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acceptance_criteria": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Acceptance Criteria",
+      "type": "array"
+    },
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "constraints": {
+      "items": {
+        "$ref": "#/$defs/ConstraintItem"
+      },
+      "title": "Constraints",
+      "type": "array"
+    },
+    "deliverables": {
+      "items": {
+        "$ref": "#/$defs/DeliverableItem"
+      },
+      "minItems": 1,
+      "title": "Deliverables",
+      "type": "array"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "goal": {
+      "title": "Goal",
+      "type": "string"
+    },
+    "risks": {
+      "items": {
+        "$ref": "#/$defs/RiskItem"
+      },
+      "title": "Risks",
+      "type": "array"
+    },
+    "scope": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Scope",
+      "type": "object"
+    },
+    "task_breakdown": {
+      "items": {
+        "$ref": "#/$defs/TaskBreakdownItem"
+      },
+      "minItems": 1,
+      "title": "Task Breakdown",
+      "type": "array"
+    }
+  },
+  "required": [
+    "goal",
+    "scope",
+    "assumptions",
+    "constraints",
+    "deliverables",
+    "task_breakdown",
+    "acceptance_criteria",
+    "risks"
+  ],
+  "title": "PlanBody",
+  "type": "object"
+}

@@ -1,0 +1,190 @@
+{
+  "$defs": {
+    "AffectedObject": {
+      "additionalProperties": false,
+      "properties": {
+        "change": {
+          "enum": [
+            "created",
+            "updated",
+            "deleted",
+            "published",
+            "deployed"
+          ],
+          "title": "Change",
+          "type": "string"
+        },
+        "object_id": {
+          "title": "Object Id",
+          "type": "string"
+        },
+        "object_type": {
+          "title": "Object Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "object_type",
+        "object_id",
+        "change"
+      ],
+      "title": "AffectedObject",
+      "type": "object"
+    },
+    "ReceiptEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "api_response",
+            "log",
+            "receipt",
+            "url"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "ref": {
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "title": "ReceiptEvidence",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/external_commit_receipt.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "affected_objects": {
+      "items": {
+        "$ref": "#/$defs/AffectedObject"
+      },
+      "title": "Affected Objects",
+      "type": "array"
+    },
+    "approval_binding_digest": {
+      "title": "Approval Binding Digest",
+      "type": "string"
+    },
+    "commit_gate_snapshot": {
+      "enum": [
+        "allow",
+        "allow_with_conditions"
+      ],
+      "title": "Commit Gate Snapshot",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/ReceiptEvidence"
+      },
+      "minItems": 1,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "external_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "External Ref"
+    },
+    "remediation_note": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Remediation Note"
+    },
+    "request_digest": {
+      "title": "Request Digest",
+      "type": "string"
+    },
+    "request_idempotency_key": {
+      "title": "Request Idempotency Key",
+      "type": "string"
+    },
+    "rollback_handle": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rollback Handle"
+    },
+    "status": {
+      "enum": [
+        "success",
+        "partial_success",
+        "failed",
+        "rolled_back"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "submitted_at": {
+      "format": "date-time",
+      "title": "Submitted At",
+      "type": "string"
+    },
+    "submitted_by": {
+      "title": "Submitted By",
+      "type": "string"
+    },
+    "target_action": {
+      "enum": [
+        "deploy",
+        "send",
+        "publish",
+        "approve_effective",
+        "create_ticket",
+        "other"
+      ],
+      "title": "Target Action",
+      "type": "string"
+    },
+    "target_system": {
+      "title": "Target System",
+      "type": "string"
+    }
+  },
+  "required": [
+    "target_system",
+    "target_action",
+    "request_digest",
+    "request_idempotency_key",
+    "submitted_by",
+    "submitted_at",
+    "status",
+    "approval_binding_digest",
+    "commit_gate_snapshot",
+    "evidence"
+  ],
+  "title": "ExternalCommitReceiptBody",
+  "type": "object"
+}

@@ -1,0 +1,305 @@
+{
+  "$defs": {
+    "CapabilityCheckResult": {
+      "additionalProperties": false,
+      "properties": {
+        "max_side_effect_level": {
+          "anyOf": [
+            {
+              "enum": [
+                "none",
+                "read_only",
+                "internal_write",
+                "external_write",
+                "external_commit"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Side Effect Level"
+        },
+        "verdict": {
+          "enum": [
+            "pass",
+            "fail",
+            "skipped"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "violations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Violations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "verdict",
+        "violations"
+      ],
+      "title": "CapabilityCheckResult",
+      "type": "object"
+    },
+    "CommitGateStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Blocking Reasons",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "allow",
+            "allow_with_conditions",
+            "deny",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "blocking_reasons"
+      ],
+      "title": "CommitGateStatus",
+      "type": "object"
+    },
+    "ComplexityLevel": {
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "title": "ComplexityLevel",
+      "type": "string"
+    },
+    "GovernanceState": {
+      "additionalProperties": false,
+      "properties": {
+        "complexity_level": {
+          "$ref": "#/$defs/ComplexityLevel"
+        },
+        "operating_mode": {
+          "$ref": "#/$defs/OperatingMode"
+        },
+        "stage": {
+          "$ref": "#/$defs/Stage"
+        },
+        "task_mode": {
+          "$ref": "#/$defs/TaskMode"
+        }
+      },
+      "required": [
+        "stage",
+        "operating_mode",
+        "task_mode",
+        "complexity_level"
+      ],
+      "title": "GovernanceState",
+      "type": "object"
+    },
+    "OperatingMode": {
+      "enum": [
+        "emergency",
+        "emergency_deliberation",
+        "deliberative",
+        "exploratory",
+        "compliance_heavy"
+      ],
+      "title": "OperatingMode",
+      "type": "string"
+    },
+    "PolicySnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_model": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Capability Model"
+        },
+        "compliance_domain": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Compliance Domain",
+          "type": "array"
+        },
+        "data_sensitivity": {
+          "anyOf": [
+            {
+              "enum": [
+                "public",
+                "internal",
+                "confidential",
+                "restricted"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data Sensitivity"
+        },
+        "hard_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hard Constraints",
+          "type": "array"
+        },
+        "soft_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Soft Constraints",
+          "type": "array"
+        },
+        "verdict": {
+          "enum": [
+            "allow",
+            "allow_with_constraints",
+            "deny",
+            "unknown"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "hard_constraints",
+        "soft_constraints",
+        "capability_model"
+      ],
+      "title": "PolicySnapshot",
+      "type": "object"
+    },
+    "Stage": {
+      "enum": [
+        "profile",
+        "policy",
+        "budget",
+        "planning",
+        "review",
+        "dispatch",
+        "pre_execute",
+        "execute",
+        "pre_commit",
+        "challenge",
+        "external_commit",
+        "audit",
+        "archive",
+        "evolve"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "TaskMode": {
+      "enum": [
+        "production",
+        "exploration",
+        "governance_evolution"
+      ],
+      "title": "TaskMode",
+      "type": "string"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/governance_snapshot.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approval_binding_snapshot": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approval Binding Snapshot"
+    },
+    "capability_check_result": {
+      "$ref": "#/$defs/CapabilityCheckResult"
+    },
+    "captured_at": {
+      "format": "date-time",
+      "title": "Captured At",
+      "type": "string"
+    },
+    "commit_gate_status": {
+      "$ref": "#/$defs/CommitGateStatus"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "governance_state": {
+      "$ref": "#/$defs/GovernanceState"
+    },
+    "policy_snapshot": {
+      "$ref": "#/$defs/PolicySnapshot"
+    },
+    "snapshot_id": {
+      "title": "Snapshot Id",
+      "type": "string"
+    },
+    "source_artifact_id": {
+      "title": "Source Artifact Id",
+      "type": "string"
+    },
+    "source_artifact_type": {
+      "enum": [
+        "policy_decision",
+        "review_report",
+        "final_report",
+        "challenge_report",
+        "work_order",
+        "result"
+      ],
+      "title": "Source Artifact Type",
+      "type": "string"
+    },
+    "source_event_id": {
+      "title": "Source Event Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "snapshot_id",
+    "captured_at",
+    "source_artifact_type",
+    "source_artifact_id",
+    "source_event_id",
+    "governance_state",
+    "policy_snapshot",
+    "capability_check_result",
+    "commit_gate_status"
+  ],
+  "title": "GovernanceSnapshotBody",
+  "type": "object"
+}

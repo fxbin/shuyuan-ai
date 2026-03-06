@@ -1,0 +1,81 @@
+{
+  "$defs": {
+    "Rollout": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_days": {
+          "minimum": 1,
+          "title": "Duration Days",
+          "type": "integer"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "target_population": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Population"
+        }
+      },
+      "required": [
+        "kind",
+        "duration_days"
+      ],
+      "title": "Rollout",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/experiment_plan.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "change": {
+      "title": "Change",
+      "type": "string"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "hypothesis": {
+      "title": "Hypothesis",
+      "type": "string"
+    },
+    "metrics": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Metrics",
+      "type": "array"
+    },
+    "rollback_thresholds": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Rollback Thresholds",
+      "type": "array"
+    },
+    "rollout": {
+      "$ref": "#/$defs/Rollout"
+    }
+  },
+  "required": [
+    "change",
+    "hypothesis",
+    "metrics",
+    "rollout",
+    "rollback_thresholds"
+  ],
+  "title": "ExperimentPlanBody",
+  "type": "object"
+}

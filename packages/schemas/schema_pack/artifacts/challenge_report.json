@@ -1,0 +1,186 @@
+{
+  "$defs": {
+    "ChallengeOverall": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Blocking Reasons",
+          "type": "array"
+        },
+        "commit_gate": {
+          "enum": [
+            "allow",
+            "allow_with_conditions",
+            "deny"
+          ],
+          "title": "Commit Gate",
+          "type": "string"
+        },
+        "pass": {
+          "title": "Pass",
+          "type": "boolean"
+        },
+        "risk_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Risk Notes",
+          "type": "array"
+        },
+        "stop_reason": {
+          "enum": [
+            "all_tests_done",
+            "budget_exhausted",
+            "critical_fail_fast",
+            "timeout"
+          ],
+          "title": "Stop Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pass",
+        "risk_notes",
+        "stop_reason",
+        "commit_gate",
+        "blocking_reasons"
+      ],
+      "title": "ChallengeOverall",
+      "type": "object"
+    },
+    "ChallengeTest": {
+      "additionalProperties": false,
+      "properties": {
+        "case": {
+          "title": "Case",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "counterexample",
+            "constraint",
+            "security",
+            "cost",
+            "fidelity",
+            "commit_gate"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "cost_estimate": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Cost Estimate",
+          "type": "object"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "expected": {
+          "title": "Expected",
+          "type": "string"
+        },
+        "observed": {
+          "title": "Observed",
+          "type": "string"
+        },
+        "recommendation": {
+          "title": "Recommendation",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "med",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "warning",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "test_id": {
+          "title": "Test Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "test_id",
+        "category",
+        "case",
+        "expected",
+        "observed",
+        "status",
+        "severity",
+        "evidence",
+        "recommendation",
+        "cost_estimate"
+      ],
+      "title": "ChallengeTest",
+      "type": "object"
+    },
+    "EvidenceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "json_pointer": {
+          "title": "Json Pointer",
+          "type": "string"
+        },
+        "ref_event_id": {
+          "title": "Ref Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_event_id",
+        "json_pointer"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/challenge_report.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "overall": {
+      "$ref": "#/$defs/ChallengeOverall"
+    },
+    "tests": {
+      "items": {
+        "$ref": "#/$defs/ChallengeTest"
+      },
+      "minItems": 1,
+      "title": "Tests",
+      "type": "array"
+    }
+  },
+  "required": [
+    "tests",
+    "overall"
+  ],
+  "title": "ChallengeReportBody",
+  "type": "object"
+}

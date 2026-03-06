@@ -1,0 +1,90 @@
+{
+  "$defs": {
+    "BudgetShape": {
+      "additionalProperties": false,
+      "properties": {
+        "time_cap_s": {
+          "minimum": 0,
+          "title": "Time Cap S",
+          "type": "integer"
+        },
+        "token_cap": {
+          "minimum": 0,
+          "title": "Token Cap",
+          "type": "integer"
+        },
+        "tool_cap": {
+          "minimum": 0,
+          "title": "Tool Cap",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_cap",
+        "time_cap_s",
+        "tool_cap"
+      ],
+      "title": "BudgetShape",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/budget_event.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "set",
+        "degrade",
+        "approve_add",
+        "reject_add",
+        "terminate"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "after": {
+      "$ref": "#/$defs/BudgetShape"
+    },
+    "approvers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Approvers",
+      "type": "array"
+    },
+    "before": {
+      "$ref": "#/$defs/BudgetShape"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "trigger_ratio": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trigger Ratio"
+    }
+  },
+  "required": [
+    "action",
+    "before",
+    "after",
+    "reason"
+  ],
+  "title": "BudgetEventBody",
+  "type": "object"
+}

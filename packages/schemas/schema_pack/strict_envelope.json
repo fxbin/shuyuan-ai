@@ -1,0 +1,3251 @@
+{
+  "$defs": {
+    "AffectedObject": {
+      "additionalProperties": false,
+      "properties": {
+        "change": {
+          "enum": [
+            "created",
+            "updated",
+            "deleted",
+            "published",
+            "deployed"
+          ],
+          "title": "Change",
+          "type": "string"
+        },
+        "object_id": {
+          "title": "Object Id",
+          "type": "string"
+        },
+        "object_type": {
+          "title": "Object Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "object_type",
+        "object_id",
+        "change"
+      ],
+      "title": "AffectedObject",
+      "type": "object"
+    },
+    "AgendaBody": {
+      "additionalProperties": false,
+      "properties": {
+        "decision_axes": {
+          "items": {
+            "enum": [
+              "speed_vs_accuracy",
+              "cost_vs_safety",
+              "compliance_vs_coverage",
+              "other"
+            ],
+            "type": "string"
+          },
+          "title": "Decision Axes",
+          "type": "array"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "forbid_majority_override_on": {
+          "items": {
+            "enum": [
+              "policy",
+              "capability",
+              "compliance",
+              "external_side_effect"
+            ],
+            "type": "string"
+          },
+          "title": "Forbid Majority Override On",
+          "type": "array"
+        },
+        "participant_roles": {
+          "items": {
+            "$ref": "#/$defs/ParticipantRole"
+          },
+          "maxItems": 7,
+          "minItems": 3,
+          "title": "Participant Roles",
+          "type": "array"
+        },
+        "stopping_rule": {
+          "$ref": "#/$defs/StoppingRule"
+        },
+        "topic": {
+          "title": "Topic",
+          "type": "string"
+        }
+      },
+      "required": [
+        "topic",
+        "participant_roles",
+        "decision_axes",
+        "stopping_rule",
+        "forbid_majority_override_on"
+      ],
+      "title": "AgendaBody",
+      "type": "object"
+    },
+    "ApprovalBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_digest": {
+          "title": "Approval Digest",
+          "type": "string"
+        },
+        "approval_scope": {
+          "title": "Approval Scope",
+          "type": "string"
+        },
+        "approved_at": {
+          "format": "date-time",
+          "title": "Approved At",
+          "type": "string"
+        },
+        "approved_by": {
+          "title": "Approved By",
+          "type": "string"
+        },
+        "artifact_id": {
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "version",
+        "approval_digest",
+        "approved_by",
+        "approved_at",
+        "approval_scope"
+      ],
+      "title": "ApprovalBinding",
+      "type": "object"
+    },
+    "ArtifactType": {
+      "enum": [
+        "task_profile",
+        "policy_decision",
+        "budget_event",
+        "budget_request",
+        "plan",
+        "review_report",
+        "work_order",
+        "result",
+        "challenge_report",
+        "agenda",
+        "round_summary",
+        "final_report",
+        "audit_report",
+        "experiment_plan",
+        "governance_snapshot",
+        "external_commit_receipt",
+        "publish_receipt"
+      ],
+      "title": "ArtifactType",
+      "type": "string"
+    },
+    "AttackItem": {
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "target_claim_id": {
+          "title": "Target Claim Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_claim_id",
+        "by",
+        "text"
+      ],
+      "title": "AttackItem",
+      "type": "object"
+    },
+    "AuditFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "med",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "severity",
+        "description"
+      ],
+      "title": "AuditFinding",
+      "type": "object"
+    },
+    "AuditReportBody": {
+      "additionalProperties": false,
+      "properties": {
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/AuditFinding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "recommendations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Recommendations",
+          "type": "array"
+        },
+        "verdict": {
+          "enum": [
+            "pass",
+            "pass_with_risks",
+            "fail"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "findings",
+        "recommendations"
+      ],
+      "title": "AuditReportBody",
+      "type": "object"
+    },
+    "BlockingMinority": {
+      "additionalProperties": false,
+      "properties": {
+        "point": {
+          "title": "Point",
+          "type": "string"
+        },
+        "reason_type": {
+          "enum": [
+            "policy",
+            "capability",
+            "compliance",
+            "external_side_effect",
+            "evidence_gap",
+            "untested_assumption"
+          ],
+          "title": "Reason Type",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "unresolved",
+            "resolved"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "point",
+        "reason_type",
+        "status"
+      ],
+      "title": "BlockingMinority",
+      "type": "object"
+    },
+    "BudgetCurrent": {
+      "additionalProperties": false,
+      "properties": {
+        "time_cap_s": {
+          "minimum": 0,
+          "title": "Time Cap S",
+          "type": "integer"
+        },
+        "token_cap": {
+          "minimum": 0,
+          "title": "Token Cap",
+          "type": "integer"
+        },
+        "token_used": {
+          "minimum": 0,
+          "title": "Token Used",
+          "type": "integer"
+        },
+        "tool_cap": {
+          "minimum": 0,
+          "title": "Tool Cap",
+          "type": "integer"
+        },
+        "tool_used": {
+          "minimum": 0,
+          "title": "Tool Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_cap",
+        "token_used",
+        "time_cap_s",
+        "tool_cap",
+        "tool_used"
+      ],
+      "title": "BudgetCurrent",
+      "type": "object"
+    },
+    "BudgetEventBody": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "set",
+            "degrade",
+            "approve_add",
+            "reject_add",
+            "terminate"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "after": {
+          "$ref": "#/$defs/BudgetShape"
+        },
+        "approvers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Approvers",
+          "type": "array"
+        },
+        "before": {
+          "$ref": "#/$defs/BudgetShape"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "trigger_ratio": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trigger Ratio"
+        }
+      },
+      "required": [
+        "action",
+        "before",
+        "after",
+        "reason"
+      ],
+      "title": "BudgetEventBody",
+      "type": "object"
+    },
+    "BudgetRequestBody": {
+      "additionalProperties": false,
+      "properties": {
+        "alternatives_tried": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Alternatives Tried",
+          "type": "array"
+        },
+        "current_budget": {
+          "$ref": "#/$defs/BudgetCurrent"
+        },
+        "expected_value": {
+          "title": "Expected Value",
+          "type": "string"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "requested_budget": {
+          "$ref": "#/$defs/BudgetRequested"
+        },
+        "urgency": {
+          "enum": [
+            "low",
+            "med",
+            "high"
+          ],
+          "title": "Urgency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "current_budget",
+        "requested_budget",
+        "alternatives_tried",
+        "expected_value",
+        "urgency"
+      ],
+      "title": "BudgetRequestBody",
+      "type": "object"
+    },
+    "BudgetRequested": {
+      "additionalProperties": false,
+      "properties": {
+        "time_add_s": {
+          "minimum": 0,
+          "title": "Time Add S",
+          "type": "integer"
+        },
+        "token_add": {
+          "minimum": 0,
+          "title": "Token Add",
+          "type": "integer"
+        },
+        "tool_add": {
+          "minimum": 0,
+          "title": "Tool Add",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_add",
+        "time_add_s",
+        "tool_add"
+      ],
+      "title": "BudgetRequested",
+      "type": "object"
+    },
+    "BudgetShape": {
+      "additionalProperties": false,
+      "properties": {
+        "time_cap_s": {
+          "minimum": 0,
+          "title": "Time Cap S",
+          "type": "integer"
+        },
+        "token_cap": {
+          "minimum": 0,
+          "title": "Token Cap",
+          "type": "integer"
+        },
+        "tool_cap": {
+          "minimum": 0,
+          "title": "Tool Cap",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_cap",
+        "time_cap_s",
+        "tool_cap"
+      ],
+      "title": "BudgetShape",
+      "type": "object"
+    },
+    "BudgetSlice": {
+      "additionalProperties": false,
+      "properties": {
+        "time_cap_s": {
+          "minimum": 0,
+          "title": "Time Cap S",
+          "type": "integer"
+        },
+        "token_cap": {
+          "minimum": 0,
+          "title": "Token Cap",
+          "type": "integer"
+        },
+        "tool_cap": {
+          "minimum": 0,
+          "title": "Tool Cap",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_cap",
+        "time_cap_s",
+        "tool_cap"
+      ],
+      "title": "BudgetSlice",
+      "type": "object"
+    },
+    "CapabilityCheckResult": {
+      "additionalProperties": false,
+      "properties": {
+        "max_side_effect_level": {
+          "anyOf": [
+            {
+              "enum": [
+                "none",
+                "read_only",
+                "internal_write",
+                "external_write",
+                "external_commit"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Side Effect Level"
+        },
+        "verdict": {
+          "enum": [
+            "pass",
+            "fail",
+            "skipped"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "violations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Violations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "verdict",
+        "violations"
+      ],
+      "title": "CapabilityCheckResult",
+      "type": "object"
+    },
+    "CapabilityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Tools",
+          "type": "array"
+        },
+        "approval_required_for": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Approval Required For",
+          "type": "array"
+        },
+        "data_scope": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Scope",
+          "type": "array"
+        },
+        "forbidden_tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Tools",
+          "type": "array"
+        },
+        "max_side_effect_level": {
+          "enum": [
+            "none",
+            "read_only",
+            "internal_write",
+            "external_write",
+            "external_commit",
+            "deploy"
+          ],
+          "title": "Max Side Effect Level",
+          "type": "string"
+        },
+        "network_scope": {
+          "enum": [
+            "none",
+            "internal_only",
+            "allowlisted_external",
+            "full"
+          ],
+          "title": "Network Scope",
+          "type": "string"
+        },
+        "redaction_required": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Redaction Required",
+          "type": "array"
+        }
+      },
+      "required": [
+        "allowed_tools",
+        "forbidden_tools",
+        "data_scope",
+        "network_scope",
+        "redaction_required",
+        "approval_required_for",
+        "max_side_effect_level"
+      ],
+      "title": "CapabilityModel",
+      "type": "object"
+    },
+    "ChallengeOverall": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Blocking Reasons",
+          "type": "array"
+        },
+        "commit_gate": {
+          "enum": [
+            "allow",
+            "allow_with_conditions",
+            "deny"
+          ],
+          "title": "Commit Gate",
+          "type": "string"
+        },
+        "pass": {
+          "title": "Pass",
+          "type": "boolean"
+        },
+        "risk_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Risk Notes",
+          "type": "array"
+        },
+        "stop_reason": {
+          "enum": [
+            "all_tests_done",
+            "budget_exhausted",
+            "critical_fail_fast",
+            "timeout"
+          ],
+          "title": "Stop Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pass",
+        "risk_notes",
+        "stop_reason",
+        "commit_gate",
+        "blocking_reasons"
+      ],
+      "title": "ChallengeOverall",
+      "type": "object"
+    },
+    "ChallengeReportBody": {
+      "additionalProperties": false,
+      "properties": {
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "overall": {
+          "$ref": "#/$defs/ChallengeOverall"
+        },
+        "tests": {
+          "items": {
+            "$ref": "#/$defs/ChallengeTest"
+          },
+          "minItems": 1,
+          "title": "Tests",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tests",
+        "overall"
+      ],
+      "title": "ChallengeReportBody",
+      "type": "object"
+    },
+    "ChallengeTest": {
+      "additionalProperties": false,
+      "properties": {
+        "case": {
+          "title": "Case",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "counterexample",
+            "constraint",
+            "security",
+            "cost",
+            "fidelity",
+            "commit_gate"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "cost_estimate": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Cost Estimate",
+          "type": "object"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "expected": {
+          "title": "Expected",
+          "type": "string"
+        },
+        "observed": {
+          "title": "Observed",
+          "type": "string"
+        },
+        "recommendation": {
+          "title": "Recommendation",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "med",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "warning",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "test_id": {
+          "title": "Test Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "test_id",
+        "category",
+        "case",
+        "expected",
+        "observed",
+        "status",
+        "severity",
+        "evidence",
+        "recommendation",
+        "cost_estimate"
+      ],
+      "title": "ChallengeTest",
+      "type": "object"
+    },
+    "Citation": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Id"
+        },
+        "json_pointer": {
+          "title": "Json Pointer",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "quote_hash": {
+          "title": "Quote Hash",
+          "type": "string"
+        },
+        "ref_id": {
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_type": {
+          "enum": [
+            "event",
+            "artifact",
+            "document"
+          ],
+          "title": "Ref Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_type",
+        "ref_id",
+        "json_pointer",
+        "quote_hash"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "ClaimItem": {
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "by",
+        "text"
+      ],
+      "title": "ClaimItem",
+      "type": "object"
+    },
+    "CommitGateStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Blocking Reasons",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "allow",
+            "allow_with_conditions",
+            "deny",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "blocking_reasons"
+      ],
+      "title": "CommitGateStatus",
+      "type": "object"
+    },
+    "CommitReadiness": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Blocking Reasons",
+          "type": "array"
+        },
+        "ready": {
+          "title": "Ready",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ready",
+        "blocking_reasons"
+      ],
+      "title": "CommitReadiness",
+      "type": "object"
+    },
+    "ComplexityLevel": {
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "title": "ComplexityLevel",
+      "type": "string"
+    },
+    "ConstraintItem": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "hard",
+            "soft"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "title": "ConstraintItem",
+      "type": "object"
+    },
+    "DefenseItem": {
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "target_attack_id": {
+          "title": "Target Attack Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_attack_id",
+        "by",
+        "text"
+      ],
+      "title": "DefenseItem",
+      "type": "object"
+    },
+    "DeliverableItem": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "enum": [
+            "md",
+            "json",
+            "code",
+            "ppt",
+            "doc",
+            "link",
+            "other"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "format",
+        "owner"
+      ],
+      "title": "DeliverableItem",
+      "type": "object"
+    },
+    "EffectiveStatus": {
+      "enum": [
+        "draft",
+        "submitted",
+        "approved",
+        "superseded",
+        "revoked",
+        "effective"
+      ],
+      "title": "EffectiveStatus",
+      "type": "string"
+    },
+    "EnvelopeBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "time_cap_s": {
+          "minimum": 0,
+          "title": "Time Cap S",
+          "type": "integer"
+        },
+        "token_cap": {
+          "minimum": 0,
+          "title": "Token Cap",
+          "type": "integer"
+        },
+        "token_used": {
+          "minimum": 0,
+          "title": "Token Used",
+          "type": "integer"
+        },
+        "tool_cap": {
+          "minimum": 0,
+          "title": "Tool Cap",
+          "type": "integer"
+        },
+        "tool_used": {
+          "minimum": 0,
+          "title": "Tool Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_cap",
+        "token_used",
+        "time_cap_s",
+        "tool_cap",
+        "tool_used"
+      ],
+      "title": "EnvelopeBudget",
+      "type": "object"
+    },
+    "EnvelopeConstraints": {
+      "additionalProperties": false,
+      "properties": {
+        "hard": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hard",
+          "type": "array"
+        },
+        "soft": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Soft",
+          "type": "array"
+        }
+      },
+      "required": [
+        "hard",
+        "soft"
+      ],
+      "title": "EnvelopeConstraints",
+      "type": "object"
+    },
+    "EnvelopeHeader": {
+      "additionalProperties": false,
+      "properties": {
+        "approver_agent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approver Agent"
+        },
+        "artifact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Id"
+        },
+        "artifact_type": {
+          "$ref": "#/$defs/ArtifactType"
+        },
+        "complexity_level": {
+          "$ref": "#/$defs/ComplexityLevel"
+        },
+        "effective_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EffectiveStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "lane": {
+          "$ref": "#/$defs/Lane"
+        },
+        "module_set": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Module Set",
+          "type": "array"
+        },
+        "operating_mode": {
+          "$ref": "#/$defs/OperatingMode"
+        },
+        "parent_artifact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Artifact Id"
+        },
+        "parent_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Event Id"
+        },
+        "producer_agent": {
+          "title": "Producer Agent",
+          "type": "string"
+        },
+        "reviewer_agent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewer Agent"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "stage": {
+          "$ref": "#/$defs/Stage"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "task_mode": {
+          "$ref": "#/$defs/TaskMode"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "trace_id": {
+          "title": "Trace Id",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "task_id",
+        "trace_id",
+        "event_id",
+        "timestamp",
+        "lane",
+        "stage",
+        "complexity_level",
+        "artifact_type",
+        "module_set",
+        "producer_agent",
+        "schema_version",
+        "operating_mode",
+        "task_mode"
+      ],
+      "title": "EnvelopeHeader",
+      "type": "object"
+    },
+    "EvidenceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "json_pointer": {
+          "title": "Json Pointer",
+          "type": "string"
+        },
+        "ref_event_id": {
+          "title": "Ref Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_event_id",
+        "json_pointer"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "ExperimentPlanBody": {
+      "additionalProperties": false,
+      "properties": {
+        "change": {
+          "title": "Change",
+          "type": "string"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "hypothesis": {
+          "title": "Hypothesis",
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "rollback_thresholds": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Rollback Thresholds",
+          "type": "array"
+        },
+        "rollout": {
+          "$ref": "#/$defs/Rollout"
+        }
+      },
+      "required": [
+        "change",
+        "hypothesis",
+        "metrics",
+        "rollout",
+        "rollback_thresholds"
+      ],
+      "title": "ExperimentPlanBody",
+      "type": "object"
+    },
+    "ExplorationOption": {
+      "additionalProperties": false,
+      "properties": {
+        "fit_for": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fit For",
+          "type": "array"
+        },
+        "option": {
+          "title": "Option",
+          "type": "string"
+        },
+        "risks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Risks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "option",
+        "fit_for",
+        "risks"
+      ],
+      "title": "ExplorationOption",
+      "type": "object"
+    },
+    "ExplorationOutcome": {
+      "additionalProperties": false,
+      "properties": {
+        "hypotheses_rejected": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hypotheses Rejected",
+          "type": "array"
+        },
+        "negative_findings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Negative Findings",
+          "type": "array"
+        },
+        "questions_resolved": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Questions Resolved",
+          "type": "array"
+        },
+        "recommended_next_step": {
+          "title": "Recommended Next Step",
+          "type": "string"
+        },
+        "viable_options": {
+          "items": {
+            "$ref": "#/$defs/ExplorationOption"
+          },
+          "title": "Viable Options",
+          "type": "array"
+        }
+      },
+      "required": [
+        "questions_resolved",
+        "hypotheses_rejected",
+        "viable_options",
+        "negative_findings",
+        "recommended_next_step"
+      ],
+      "title": "ExplorationOutcome",
+      "type": "object"
+    },
+    "ExternalCommitReceiptBody": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_objects": {
+          "items": {
+            "$ref": "#/$defs/AffectedObject"
+          },
+          "title": "Affected Objects",
+          "type": "array"
+        },
+        "approval_binding_digest": {
+          "title": "Approval Binding Digest",
+          "type": "string"
+        },
+        "commit_gate_snapshot": {
+          "enum": [
+            "allow",
+            "allow_with_conditions"
+          ],
+          "title": "Commit Gate Snapshot",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/ReceiptEvidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "external_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Ref"
+        },
+        "remediation_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remediation Note"
+        },
+        "request_digest": {
+          "title": "Request Digest",
+          "type": "string"
+        },
+        "request_idempotency_key": {
+          "title": "Request Idempotency Key",
+          "type": "string"
+        },
+        "rollback_handle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rollback Handle"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "partial_success",
+            "failed",
+            "rolled_back"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "submitted_at": {
+          "format": "date-time",
+          "title": "Submitted At",
+          "type": "string"
+        },
+        "submitted_by": {
+          "title": "Submitted By",
+          "type": "string"
+        },
+        "target_action": {
+          "enum": [
+            "deploy",
+            "send",
+            "publish",
+            "approve_effective",
+            "create_ticket",
+            "other"
+          ],
+          "title": "Target Action",
+          "type": "string"
+        },
+        "target_system": {
+          "title": "Target System",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_system",
+        "target_action",
+        "request_digest",
+        "request_idempotency_key",
+        "submitted_by",
+        "submitted_at",
+        "status",
+        "approval_binding_digest",
+        "commit_gate_snapshot",
+        "evidence"
+      ],
+      "title": "ExternalCommitReceiptBody",
+      "type": "object"
+    },
+    "FinalReportBody": {
+      "additionalProperties": false,
+      "properties": {
+        "agreed_plan": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Agreed Plan",
+          "type": "array"
+        },
+        "blocking_minority": {
+          "items": {
+            "$ref": "#/$defs/BlockingMinority"
+          },
+          "title": "Blocking Minority",
+          "type": "array"
+        },
+        "decision_rule_used": {
+          "enum": [
+            "consensus",
+            "majority",
+            "weighted_axis",
+            "guardian_veto",
+            "user_escalation"
+          ],
+          "title": "Decision Rule Used",
+          "type": "string"
+        },
+        "decision_type": {
+          "enum": [
+            "consensus",
+            "majority_with_dissent",
+            "unresolved_escalation"
+          ],
+          "title": "Decision Type",
+          "type": "string"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "informational_minority": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Informational Minority",
+          "type": "array"
+        },
+        "open_disagreements": {
+          "items": {
+            "$ref": "#/$defs/OpenDisagreementFinal"
+          },
+          "title": "Open Disagreements",
+          "type": "array"
+        },
+        "participant_roster": {
+          "items": {
+            "$ref": "#/$defs/ParticipantRosterItem"
+          },
+          "minItems": 3,
+          "title": "Participant Roster",
+          "type": "array"
+        },
+        "recommendation": {
+          "title": "Recommendation",
+          "type": "string"
+        },
+        "requires_user_approval": {
+          "title": "Requires User Approval",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "decision_type",
+        "decision_rule_used",
+        "participant_roster",
+        "agreed_plan",
+        "open_disagreements",
+        "recommendation",
+        "requires_user_approval"
+      ],
+      "title": "FinalReportBody",
+      "type": "object"
+    },
+    "GovernanceCarryover": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_binding": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Approval Binding"
+        },
+        "commit_gate": {
+          "enum": [
+            "unknown",
+            "allow",
+            "allow_with_conditions",
+            "deny"
+          ],
+          "title": "Commit Gate",
+          "type": "string"
+        },
+        "critical_risk_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Critical Risk Notes",
+          "type": "array"
+        },
+        "failed_self_check": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failed Self Check",
+          "type": "array"
+        },
+        "hard_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hard Constraints",
+          "type": "array"
+        },
+        "known_limits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Limits",
+          "type": "array"
+        },
+        "minority_view": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Minority View",
+          "type": "array"
+        },
+        "open_disagreements": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Open Disagreements",
+          "type": "array"
+        }
+      },
+      "required": [
+        "hard_constraints",
+        "approval_binding",
+        "critical_risk_notes",
+        "known_limits",
+        "open_disagreements",
+        "minority_view",
+        "failed_self_check",
+        "commit_gate"
+      ],
+      "title": "GovernanceCarryover",
+      "type": "object"
+    },
+    "GovernanceSnapshotBody": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_binding_snapshot": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approval Binding Snapshot"
+        },
+        "capability_check_result": {
+          "$ref": "#/$defs/CapabilityCheckResult"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "commit_gate_status": {
+          "$ref": "#/$defs/CommitGateStatus"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "governance_state": {
+          "$ref": "#/$defs/GovernanceState"
+        },
+        "policy_snapshot": {
+          "$ref": "#/$defs/PolicySnapshot"
+        },
+        "snapshot_id": {
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "source_artifact_id": {
+          "title": "Source Artifact Id",
+          "type": "string"
+        },
+        "source_artifact_type": {
+          "enum": [
+            "policy_decision",
+            "review_report",
+            "final_report",
+            "challenge_report",
+            "work_order",
+            "result"
+          ],
+          "title": "Source Artifact Type",
+          "type": "string"
+        },
+        "source_event_id": {
+          "title": "Source Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "captured_at",
+        "source_artifact_type",
+        "source_artifact_id",
+        "source_event_id",
+        "governance_state",
+        "policy_snapshot",
+        "capability_check_result",
+        "commit_gate_status"
+      ],
+      "title": "GovernanceSnapshotBody",
+      "type": "object"
+    },
+    "GovernanceState": {
+      "additionalProperties": false,
+      "properties": {
+        "complexity_level": {
+          "$ref": "#/$defs/ComplexityLevel"
+        },
+        "operating_mode": {
+          "$ref": "#/$defs/OperatingMode"
+        },
+        "stage": {
+          "$ref": "#/$defs/Stage"
+        },
+        "task_mode": {
+          "$ref": "#/$defs/TaskMode"
+        }
+      },
+      "required": [
+        "stage",
+        "operating_mode",
+        "task_mode",
+        "complexity_level"
+      ],
+      "title": "GovernanceState",
+      "type": "object"
+    },
+    "Lane": {
+      "enum": [
+        "fast",
+        "norm",
+        "round",
+        "sandbox"
+      ],
+      "title": "Lane",
+      "type": "string"
+    },
+    "LaneSuggestion": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "suggested_level": {
+          "enum": [
+            "L0",
+            "L1",
+            "L2",
+            "L3"
+          ],
+          "title": "Suggested Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "suggested_level",
+        "reason"
+      ],
+      "title": "LaneSuggestion",
+      "type": "object"
+    },
+    "OpenDisagreement": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict_axis": {
+          "title": "Conflict Axis",
+          "type": "string"
+        },
+        "point": {
+          "title": "Point",
+          "type": "string"
+        },
+        "view_a": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "View A"
+        },
+        "view_b": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "View B"
+        }
+      },
+      "required": [
+        "point",
+        "conflict_axis"
+      ],
+      "title": "OpenDisagreement",
+      "type": "object"
+    },
+    "OpenDisagreementFinal": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict_axis": {
+          "title": "Conflict Axis",
+          "type": "string"
+        },
+        "majority_view": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Majority View"
+        },
+        "minority_view": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minority View"
+        },
+        "point": {
+          "title": "Point",
+          "type": "string"
+        }
+      },
+      "required": [
+        "point",
+        "conflict_axis"
+      ],
+      "title": "OpenDisagreementFinal",
+      "type": "object"
+    },
+    "OperatingMode": {
+      "enum": [
+        "emergency",
+        "emergency_deliberation",
+        "deliberative",
+        "exploratory",
+        "compliance_heavy"
+      ],
+      "title": "OperatingMode",
+      "type": "string"
+    },
+    "ParticipantRole": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "role": {
+          "enum": [
+            "proposer",
+            "adversary",
+            "synthesizer",
+            "guardian"
+          ],
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "domain",
+        "required"
+      ],
+      "title": "ParticipantRole",
+      "type": "object"
+    },
+    "ParticipantRosterItem": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "domain"
+      ],
+      "title": "ParticipantRosterItem",
+      "type": "object"
+    },
+    "PlanBody": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_criteria": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Acceptance Criteria",
+          "type": "array"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/ConstraintItem"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "deliverables": {
+          "items": {
+            "$ref": "#/$defs/DeliverableItem"
+          },
+          "minItems": 1,
+          "title": "Deliverables",
+          "type": "array"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "goal": {
+          "title": "Goal",
+          "type": "string"
+        },
+        "risks": {
+          "items": {
+            "$ref": "#/$defs/RiskItem"
+          },
+          "title": "Risks",
+          "type": "array"
+        },
+        "scope": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Scope",
+          "type": "object"
+        },
+        "task_breakdown": {
+          "items": {
+            "$ref": "#/$defs/TaskBreakdownItem"
+          },
+          "minItems": 1,
+          "title": "Task Breakdown",
+          "type": "array"
+        }
+      },
+      "required": [
+        "goal",
+        "scope",
+        "assumptions",
+        "constraints",
+        "deliverables",
+        "task_breakdown",
+        "acceptance_criteria",
+        "risks"
+      ],
+      "title": "PlanBody",
+      "type": "object"
+    },
+    "PolicyDecisionBody": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_model": {
+          "$ref": "#/$defs/CapabilityModel"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "hard_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hard Constraints",
+          "type": "array"
+        },
+        "policy_verdict": {
+          "enum": [
+            "allow",
+            "allow_with_constraints",
+            "deny"
+          ],
+          "title": "Policy Verdict",
+          "type": "string"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "required_actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Actions",
+          "type": "array"
+        },
+        "soft_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Soft Constraints",
+          "type": "array"
+        },
+        "violations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Violations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy_verdict",
+        "hard_constraints",
+        "soft_constraints",
+        "rationale",
+        "capability_model"
+      ],
+      "title": "PolicyDecisionBody",
+      "type": "object"
+    },
+    "PolicySnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_model": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Capability Model"
+        },
+        "compliance_domain": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Compliance Domain",
+          "type": "array"
+        },
+        "data_sensitivity": {
+          "anyOf": [
+            {
+              "enum": [
+                "public",
+                "internal",
+                "confidential",
+                "restricted"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data Sensitivity"
+        },
+        "hard_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hard Constraints",
+          "type": "array"
+        },
+        "soft_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Soft Constraints",
+          "type": "array"
+        },
+        "verdict": {
+          "enum": [
+            "allow",
+            "allow_with_constraints",
+            "deny",
+            "unknown"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "hard_constraints",
+        "soft_constraints",
+        "capability_model"
+      ],
+      "title": "PolicySnapshot",
+      "type": "object"
+    },
+    "PublishReceiptBody": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_binding_digest": {
+          "title": "Approval Binding Digest",
+          "type": "string"
+        },
+        "commit_gate_snapshot": {
+          "enum": [
+            "allow",
+            "allow_with_conditions"
+          ],
+          "title": "Commit Gate Snapshot",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/ReceiptEvidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "external_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Ref"
+        },
+        "publish_type": {
+          "enum": [
+            "public",
+            "private",
+            "internal",
+            "staged",
+            "other"
+          ],
+          "title": "Publish Type",
+          "type": "string"
+        },
+        "published_at": {
+          "format": "date-time",
+          "title": "Published At",
+          "type": "string"
+        },
+        "published_by": {
+          "title": "Published By",
+          "type": "string"
+        },
+        "remediation_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remediation Note"
+        },
+        "request_digest": {
+          "title": "Request Digest",
+          "type": "string"
+        },
+        "request_idempotency_key": {
+          "title": "Request Idempotency Key",
+          "type": "string"
+        },
+        "rollback_handle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rollback Handle"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "partial_success",
+            "failed",
+            "rolled_back"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "target_platform": {
+          "title": "Target Platform",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_platform",
+        "publish_type",
+        "request_digest",
+        "request_idempotency_key",
+        "published_by",
+        "published_at",
+        "status",
+        "approval_binding_digest",
+        "commit_gate_snapshot",
+        "evidence"
+      ],
+      "title": "PublishReceiptBody",
+      "type": "object"
+    },
+    "ReceiptEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "api_response",
+            "log",
+            "receipt",
+            "url"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "ref": {
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "title": "ReceiptEvidence",
+      "type": "object"
+    },
+    "ResultBody": {
+      "additionalProperties": false,
+      "properties": {
+        "commit_readiness": {
+          "$ref": "#/$defs/CommitReadiness"
+        },
+        "executed_actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Executed Actions",
+          "type": "array"
+        },
+        "expected_receipt_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "external_commit_receipt",
+                "publish_receipt"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Receipt Type"
+        },
+        "exploration_outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExplorationOutcome"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "failed_self_check": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failed Self Check",
+          "type": "array"
+        },
+        "known_limits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Limits",
+          "type": "array"
+        },
+        "next_steps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Next Steps",
+          "type": "array"
+        },
+        "outputs": {
+          "items": {
+            "$ref": "#/$defs/ResultOutput"
+          },
+          "minItems": 1,
+          "title": "Outputs",
+          "type": "array"
+        },
+        "pending_commit_targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Pending Commit Targets",
+          "type": "array"
+        },
+        "self_check": {
+          "items": {
+            "$ref": "#/$defs/SelfCheckItem"
+          },
+          "title": "Self Check",
+          "type": "array"
+        },
+        "side_effect_realized": {
+          "enum": [
+            "none",
+            "read_only",
+            "internal_write",
+            "external_write",
+            "external_commit"
+          ],
+          "title": "Side Effect Realized",
+          "type": "string"
+        }
+      },
+      "required": [
+        "outputs",
+        "self_check",
+        "known_limits",
+        "failed_self_check",
+        "executed_actions",
+        "side_effect_realized",
+        "commit_readiness",
+        "next_steps"
+      ],
+      "title": "ResultBody",
+      "type": "object"
+    },
+    "ResultOutput": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "content_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Hash"
+        },
+        "content_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Ref"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "md",
+            "json",
+            "code",
+            "link",
+            "other"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "content"
+      ],
+      "title": "ResultOutput",
+      "type": "object"
+    },
+    "ReviewIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "fix_required": {
+          "title": "Fix Required",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "med",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "quality",
+            "risk",
+            "cost",
+            "policy"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "severity",
+        "description",
+        "evidence",
+        "fix_required"
+      ],
+      "title": "ReviewIssue",
+      "type": "object"
+    },
+    "ReviewReportBody": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_binding": {
+          "$ref": "#/$defs/ApprovalBinding"
+        },
+        "conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conditions",
+          "type": "array"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/ReviewIssue"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "lane_suggestion": {
+          "$ref": "#/$defs/LaneSuggestion"
+        },
+        "verdict": {
+          "enum": [
+            "approve",
+            "reject",
+            "approve_with_conditions",
+            "escalate_to_round"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "issues",
+        "conditions",
+        "lane_suggestion",
+        "approval_binding"
+      ],
+      "title": "ReviewReportBody",
+      "type": "object"
+    },
+    "RiskItem": {
+      "additionalProperties": false,
+      "properties": {
+        "mitigation": {
+          "title": "Mitigation",
+          "type": "string"
+        },
+        "risk": {
+          "title": "Risk",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "med",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "risk",
+        "severity",
+        "mitigation"
+      ],
+      "title": "RiskItem",
+      "type": "object"
+    },
+    "Rollout": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_days": {
+          "minimum": 1,
+          "title": "Duration Days",
+          "type": "integer"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "target_population": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Population"
+        }
+      },
+      "required": [
+        "kind",
+        "duration_days"
+      ],
+      "title": "Rollout",
+      "type": "object"
+    },
+    "RoundSummaryBody": {
+      "additionalProperties": false,
+      "properties": {
+        "attacks": {
+          "items": {
+            "$ref": "#/$defs/AttackItem"
+          },
+          "title": "Attacks",
+          "type": "array"
+        },
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/ClaimItem"
+          },
+          "title": "Claims",
+          "type": "array"
+        },
+        "defenses": {
+          "items": {
+            "$ref": "#/$defs/DefenseItem"
+          },
+          "title": "Defenses",
+          "type": "array"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "open_disagreements": {
+          "items": {
+            "$ref": "#/$defs/OpenDisagreement"
+          },
+          "title": "Open Disagreements",
+          "type": "array"
+        },
+        "resolved_points": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resolved Points",
+          "type": "array"
+        },
+        "round_no": {
+          "minimum": 1,
+          "title": "Round No",
+          "type": "integer"
+        },
+        "unanswered_challenges": {
+          "items": {
+            "$ref": "#/$defs/UnansweredChallenge"
+          },
+          "title": "Unanswered Challenges",
+          "type": "array"
+        }
+      },
+      "required": [
+        "round_no",
+        "claims",
+        "attacks",
+        "defenses",
+        "unanswered_challenges",
+        "resolved_points",
+        "open_disagreements"
+      ],
+      "title": "RoundSummaryBody",
+      "type": "object"
+    },
+    "Schedule": {
+      "additionalProperties": false,
+      "properties": {
+        "deadline": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "priority": {
+          "enum": [
+            "P0",
+            "P1",
+            "P2"
+          ],
+          "title": "Priority",
+          "type": "string"
+        }
+      },
+      "required": [
+        "priority"
+      ],
+      "title": "Schedule",
+      "type": "object"
+    },
+    "SelfCheckItem": {
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "title": "Check",
+          "type": "string"
+        },
+        "notes": {
+          "title": "Notes",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "check",
+        "status",
+        "notes"
+      ],
+      "title": "SelfCheckItem",
+      "type": "object"
+    },
+    "Stage": {
+      "enum": [
+        "profile",
+        "policy",
+        "budget",
+        "planning",
+        "review",
+        "dispatch",
+        "pre_execute",
+        "execute",
+        "pre_commit",
+        "challenge",
+        "external_commit",
+        "audit",
+        "archive",
+        "evolve"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "StoppingRule": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_majority_fallback": {
+          "title": "Allow Majority Fallback",
+          "type": "boolean"
+        },
+        "convergence_threshold": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Convergence Threshold",
+          "type": "number"
+        },
+        "max_rounds": {
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Max Rounds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_rounds",
+        "convergence_threshold",
+        "allow_majority_fallback"
+      ],
+      "title": "StoppingRule",
+      "type": "object"
+    },
+    "TaskBreakdownItem": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Acceptance",
+          "type": "array"
+        },
+        "deps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deps",
+          "type": "array"
+        },
+        "desc": {
+          "title": "Desc",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "desc",
+        "owner",
+        "deps",
+        "acceptance"
+      ],
+      "title": "TaskBreakdownItem",
+      "type": "object"
+    },
+    "TaskMode": {
+      "enum": [
+        "production",
+        "exploration",
+        "governance_evolution"
+      ],
+      "title": "TaskMode",
+      "type": "string"
+    },
+    "TaskProfileBody": {
+      "additionalProperties": false,
+      "properties": {
+        "ambiguity_score": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Ambiguity Score",
+          "type": "number"
+        },
+        "complexity_score": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Complexity Score",
+          "type": "number"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "raw_profile": {
+          "additionalProperties": true,
+          "title": "Raw Profile",
+          "type": "object"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "recommended_lane": {
+          "$ref": "#/$defs/Lane"
+        },
+        "recommended_level": {
+          "$ref": "#/$defs/ComplexityLevel"
+        },
+        "recommended_operating_mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OperatingMode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "risk_score": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Risk Score",
+          "type": "number"
+        },
+        "task_intent": {
+          "title": "Task Intent",
+          "type": "string"
+        },
+        "urgency_score": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Urgency Score",
+          "type": "number"
+        },
+        "value_score": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Value Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "task_intent",
+        "risk_score",
+        "ambiguity_score",
+        "complexity_score",
+        "value_score",
+        "urgency_score",
+        "recommended_lane",
+        "recommended_level"
+      ],
+      "title": "TaskProfileBody",
+      "type": "object"
+    },
+    "UnansweredChallenge": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "severity",
+        "text"
+      ],
+      "title": "UnansweredChallenge",
+      "type": "object"
+    },
+    "WorkInputRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_type": {
+          "$ref": "#/$defs/ArtifactType"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "event_id",
+        "artifact_type"
+      ],
+      "title": "WorkInputRef",
+      "type": "object"
+    },
+    "WorkItem": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Acceptance",
+          "type": "array"
+        },
+        "budget_slice": {
+          "$ref": "#/$defs/BudgetSlice"
+        },
+        "commit_targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Commit Targets",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "input_refs": {
+          "items": {
+            "$ref": "#/$defs/WorkInputRef"
+          },
+          "minItems": 1,
+          "title": "Input Refs",
+          "type": "array"
+        },
+        "instructions": {
+          "title": "Instructions",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        },
+        "rollback_plan": {
+          "title": "Rollback Plan",
+          "type": "string"
+        },
+        "side_effect_level": {
+          "enum": [
+            "none",
+            "read_only",
+            "internal_write",
+            "external_write",
+            "external_commit"
+          ],
+          "title": "Side Effect Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "owner",
+        "input_refs",
+        "instructions",
+        "acceptance",
+        "budget_slice",
+        "side_effect_level",
+        "rollback_plan"
+      ],
+      "title": "WorkItem",
+      "type": "object"
+    },
+    "WorkOrderBody": {
+      "additionalProperties": false,
+      "properties": {
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "schedule": {
+          "$ref": "#/$defs/Schedule"
+        },
+        "work_items": {
+          "items": {
+            "$ref": "#/$defs/WorkItem"
+          },
+          "minItems": 1,
+          "title": "Work Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "work_items",
+        "schedule"
+      ],
+      "title": "WorkOrderBody",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/strict_envelope.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "body": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskProfileBody"
+        },
+        {
+          "$ref": "#/$defs/PolicyDecisionBody"
+        },
+        {
+          "$ref": "#/$defs/BudgetEventBody"
+        },
+        {
+          "$ref": "#/$defs/BudgetRequestBody"
+        },
+        {
+          "$ref": "#/$defs/PlanBody"
+        },
+        {
+          "$ref": "#/$defs/ReviewReportBody"
+        },
+        {
+          "$ref": "#/$defs/WorkOrderBody"
+        },
+        {
+          "$ref": "#/$defs/ResultBody"
+        },
+        {
+          "$ref": "#/$defs/ChallengeReportBody"
+        },
+        {
+          "$ref": "#/$defs/AgendaBody"
+        },
+        {
+          "$ref": "#/$defs/RoundSummaryBody"
+        },
+        {
+          "$ref": "#/$defs/FinalReportBody"
+        },
+        {
+          "$ref": "#/$defs/AuditReportBody"
+        },
+        {
+          "$ref": "#/$defs/ExperimentPlanBody"
+        },
+        {
+          "$ref": "#/$defs/GovernanceSnapshotBody"
+        },
+        {
+          "$ref": "#/$defs/ExternalCommitReceiptBody"
+        },
+        {
+          "$ref": "#/$defs/PublishReceiptBody"
+        }
+      ],
+      "title": "Body"
+    },
+    "budget": {
+      "$ref": "#/$defs/EnvelopeBudget"
+    },
+    "citations": {
+      "items": {
+        "$ref": "#/$defs/Citation"
+      },
+      "title": "Citations",
+      "type": "array"
+    },
+    "constraints": {
+      "$ref": "#/$defs/EnvelopeConstraints"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "default": {},
+      "title": "Ext",
+      "type": "object"
+    },
+    "governance_carryover": {
+      "$ref": "#/$defs/GovernanceCarryover"
+    },
+    "header": {
+      "$ref": "#/$defs/EnvelopeHeader"
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "header",
+    "summary",
+    "citations",
+    "constraints",
+    "budget",
+    "governance_carryover",
+    "body"
+  ],
+  "title": "StrictEnvelope",
+  "type": "object"
+}

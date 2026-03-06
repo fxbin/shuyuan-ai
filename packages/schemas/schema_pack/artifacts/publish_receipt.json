@@ -1,0 +1,151 @@
+{
+  "$defs": {
+    "ReceiptEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "api_response",
+            "log",
+            "receipt",
+            "url"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "ref": {
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "title": "ReceiptEvidence",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/publish_receipt.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approval_binding_digest": {
+      "title": "Approval Binding Digest",
+      "type": "string"
+    },
+    "commit_gate_snapshot": {
+      "enum": [
+        "allow",
+        "allow_with_conditions"
+      ],
+      "title": "Commit Gate Snapshot",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/ReceiptEvidence"
+      },
+      "minItems": 1,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "external_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "External Ref"
+    },
+    "publish_type": {
+      "enum": [
+        "public",
+        "private",
+        "internal",
+        "staged",
+        "other"
+      ],
+      "title": "Publish Type",
+      "type": "string"
+    },
+    "published_at": {
+      "format": "date-time",
+      "title": "Published At",
+      "type": "string"
+    },
+    "published_by": {
+      "title": "Published By",
+      "type": "string"
+    },
+    "remediation_note": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Remediation Note"
+    },
+    "request_digest": {
+      "title": "Request Digest",
+      "type": "string"
+    },
+    "request_idempotency_key": {
+      "title": "Request Idempotency Key",
+      "type": "string"
+    },
+    "rollback_handle": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rollback Handle"
+    },
+    "status": {
+      "enum": [
+        "success",
+        "partial_success",
+        "failed",
+        "rolled_back"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "target_platform": {
+      "title": "Target Platform",
+      "type": "string"
+    }
+  },
+  "required": [
+    "target_platform",
+    "publish_type",
+    "request_digest",
+    "request_idempotency_key",
+    "published_by",
+    "published_at",
+    "status",
+    "approval_binding_digest",
+    "commit_gate_snapshot",
+    "evidence"
+  ],
+  "title": "PublishReceiptBody",
+  "type": "object"
+}

@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from apps.api.shuyuan_core.api import create_app
+from packages.schemas import artifact_schema_names, get_named_schema
 
 
 def test_schema_catalog_and_envelope_schema_are_exposed() -> None:
@@ -24,3 +25,13 @@ def test_unknown_schema_returns_404() -> None:
 
     response = client.get("/api/v2/schemas/not-exists")
     assert response.status_code == 404
+
+
+def test_registry_reads_generated_schema_pack() -> None:
+    schema = get_named_schema("strict_envelope")
+    assert schema["$id"].endswith("/strict_envelope.json")
+    assert schema["title"] == "StrictEnvelope"
+
+    artifact_name = artifact_schema_names()[0]
+    artifact_schema = get_named_schema(artifact_name)
+    assert artifact_schema["$id"].endswith(f"/artifacts/{artifact_name}.json")

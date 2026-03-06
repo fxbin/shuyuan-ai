@@ -1,0 +1,121 @@
+{
+  "$defs": {
+    "ComplexityLevel": {
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "title": "ComplexityLevel",
+      "type": "string"
+    },
+    "Lane": {
+      "enum": [
+        "fast",
+        "norm",
+        "round",
+        "sandbox"
+      ],
+      "title": "Lane",
+      "type": "string"
+    },
+    "OperatingMode": {
+      "enum": [
+        "emergency",
+        "emergency_deliberation",
+        "deliberative",
+        "exploratory",
+        "compliance_heavy"
+      ],
+      "title": "OperatingMode",
+      "type": "string"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/task_profile.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "ambiguity_score": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Ambiguity Score",
+      "type": "number"
+    },
+    "complexity_score": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Complexity Score",
+      "type": "number"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "raw_profile": {
+      "additionalProperties": true,
+      "title": "Raw Profile",
+      "type": "object"
+    },
+    "reasons": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Reasons",
+      "type": "array"
+    },
+    "recommended_lane": {
+      "$ref": "#/$defs/Lane"
+    },
+    "recommended_level": {
+      "$ref": "#/$defs/ComplexityLevel"
+    },
+    "recommended_operating_mode": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OperatingMode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "risk_score": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Risk Score",
+      "type": "number"
+    },
+    "task_intent": {
+      "title": "Task Intent",
+      "type": "string"
+    },
+    "urgency_score": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Urgency Score",
+      "type": "number"
+    },
+    "value_score": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Value Score",
+      "type": "number"
+    }
+  },
+  "required": [
+    "task_intent",
+    "risk_score",
+    "ambiguity_score",
+    "complexity_score",
+    "value_score",
+    "urgency_score",
+    "recommended_lane",
+    "recommended_level"
+  ],
+  "title": "TaskProfileBody",
+  "type": "object"
+}

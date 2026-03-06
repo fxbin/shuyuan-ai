@@ -1,0 +1,187 @@
+{
+  "$defs": {
+    "BlockingMinority": {
+      "additionalProperties": false,
+      "properties": {
+        "point": {
+          "title": "Point",
+          "type": "string"
+        },
+        "reason_type": {
+          "enum": [
+            "policy",
+            "capability",
+            "compliance",
+            "external_side_effect",
+            "evidence_gap",
+            "untested_assumption"
+          ],
+          "title": "Reason Type",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "unresolved",
+            "resolved"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "point",
+        "reason_type",
+        "status"
+      ],
+      "title": "BlockingMinority",
+      "type": "object"
+    },
+    "OpenDisagreementFinal": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict_axis": {
+          "title": "Conflict Axis",
+          "type": "string"
+        },
+        "majority_view": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Majority View"
+        },
+        "minority_view": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minority View"
+        },
+        "point": {
+          "title": "Point",
+          "type": "string"
+        }
+      },
+      "required": [
+        "point",
+        "conflict_axis"
+      ],
+      "title": "OpenDisagreementFinal",
+      "type": "object"
+    },
+    "ParticipantRosterItem": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "domain"
+      ],
+      "title": "ParticipantRosterItem",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/final_report.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agreed_plan": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Agreed Plan",
+      "type": "array"
+    },
+    "blocking_minority": {
+      "items": {
+        "$ref": "#/$defs/BlockingMinority"
+      },
+      "title": "Blocking Minority",
+      "type": "array"
+    },
+    "decision_rule_used": {
+      "enum": [
+        "consensus",
+        "majority",
+        "weighted_axis",
+        "guardian_veto",
+        "user_escalation"
+      ],
+      "title": "Decision Rule Used",
+      "type": "string"
+    },
+    "decision_type": {
+      "enum": [
+        "consensus",
+        "majority_with_dissent",
+        "unresolved_escalation"
+      ],
+      "title": "Decision Type",
+      "type": "string"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "informational_minority": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Informational Minority",
+      "type": "array"
+    },
+    "open_disagreements": {
+      "items": {
+        "$ref": "#/$defs/OpenDisagreementFinal"
+      },
+      "title": "Open Disagreements",
+      "type": "array"
+    },
+    "participant_roster": {
+      "items": {
+        "$ref": "#/$defs/ParticipantRosterItem"
+      },
+      "minItems": 3,
+      "title": "Participant Roster",
+      "type": "array"
+    },
+    "recommendation": {
+      "title": "Recommendation",
+      "type": "string"
+    },
+    "requires_user_approval": {
+      "title": "Requires User Approval",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "decision_type",
+    "decision_rule_used",
+    "participant_roster",
+    "agreed_plan",
+    "open_disagreements",
+    "recommendation",
+    "requires_user_approval"
+  ],
+  "title": "FinalReportBody",
+  "type": "object"
+}

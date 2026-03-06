@@ -1,0 +1,216 @@
+{
+  "$defs": {
+    "AttackItem": {
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "target_claim_id": {
+          "title": "Target Claim Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_claim_id",
+        "by",
+        "text"
+      ],
+      "title": "AttackItem",
+      "type": "object"
+    },
+    "ClaimItem": {
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "by",
+        "text"
+      ],
+      "title": "ClaimItem",
+      "type": "object"
+    },
+    "DefenseItem": {
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "target_attack_id": {
+          "title": "Target Attack Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_attack_id",
+        "by",
+        "text"
+      ],
+      "title": "DefenseItem",
+      "type": "object"
+    },
+    "OpenDisagreement": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict_axis": {
+          "title": "Conflict Axis",
+          "type": "string"
+        },
+        "point": {
+          "title": "Point",
+          "type": "string"
+        },
+        "view_a": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "View A"
+        },
+        "view_b": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "View B"
+        }
+      },
+      "required": [
+        "point",
+        "conflict_axis"
+      ],
+      "title": "OpenDisagreement",
+      "type": "object"
+    },
+    "UnansweredChallenge": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "severity",
+        "text"
+      ],
+      "title": "UnansweredChallenge",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/round_summary.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attacks": {
+      "items": {
+        "$ref": "#/$defs/AttackItem"
+      },
+      "title": "Attacks",
+      "type": "array"
+    },
+    "claims": {
+      "items": {
+        "$ref": "#/$defs/ClaimItem"
+      },
+      "title": "Claims",
+      "type": "array"
+    },
+    "defenses": {
+      "items": {
+        "$ref": "#/$defs/DefenseItem"
+      },
+      "title": "Defenses",
+      "type": "array"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "open_disagreements": {
+      "items": {
+        "$ref": "#/$defs/OpenDisagreement"
+      },
+      "title": "Open Disagreements",
+      "type": "array"
+    },
+    "resolved_points": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Resolved Points",
+      "type": "array"
+    },
+    "round_no": {
+      "minimum": 1,
+      "title": "Round No",
+      "type": "integer"
+    },
+    "unanswered_challenges": {
+      "items": {
+        "$ref": "#/$defs/UnansweredChallenge"
+      },
+      "title": "Unanswered Challenges",
+      "type": "array"
+    }
+  },
+  "required": [
+    "round_no",
+    "claims",
+    "attacks",
+    "defenses",
+    "unanswered_challenges",
+    "resolved_points",
+    "open_disagreements"
+  ],
+  "title": "RoundSummaryBody",
+  "type": "object"
+}

@@ -1,0 +1,140 @@
+{
+  "$defs": {
+    "CapabilityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Tools",
+          "type": "array"
+        },
+        "approval_required_for": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Approval Required For",
+          "type": "array"
+        },
+        "data_scope": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Scope",
+          "type": "array"
+        },
+        "forbidden_tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Tools",
+          "type": "array"
+        },
+        "max_side_effect_level": {
+          "enum": [
+            "none",
+            "read_only",
+            "internal_write",
+            "external_write",
+            "external_commit",
+            "deploy"
+          ],
+          "title": "Max Side Effect Level",
+          "type": "string"
+        },
+        "network_scope": {
+          "enum": [
+            "none",
+            "internal_only",
+            "allowlisted_external",
+            "full"
+          ],
+          "title": "Network Scope",
+          "type": "string"
+        },
+        "redaction_required": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Redaction Required",
+          "type": "array"
+        }
+      },
+      "required": [
+        "allowed_tools",
+        "forbidden_tools",
+        "data_scope",
+        "network_scope",
+        "redaction_required",
+        "approval_required_for",
+        "max_side_effect_level"
+      ],
+      "title": "CapabilityModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/policy_decision.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capability_model": {
+      "$ref": "#/$defs/CapabilityModel"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "hard_constraints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Hard Constraints",
+      "type": "array"
+    },
+    "policy_verdict": {
+      "enum": [
+        "allow",
+        "allow_with_constraints",
+        "deny"
+      ],
+      "title": "Policy Verdict",
+      "type": "string"
+    },
+    "rationale": {
+      "title": "Rationale",
+      "type": "string"
+    },
+    "required_actions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Required Actions",
+      "type": "array"
+    },
+    "soft_constraints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Soft Constraints",
+      "type": "array"
+    },
+    "violations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Violations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "policy_verdict",
+    "hard_constraints",
+    "soft_constraints",
+    "rationale",
+    "capability_model"
+  ],
+  "title": "PolicyDecisionBody",
+  "type": "object"
+}
