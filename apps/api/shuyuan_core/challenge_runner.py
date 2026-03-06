@@ -228,6 +228,59 @@ def _run_fidelity(ctx: YushiContext, spec: ChallengeSpec) -> dict[str, Any]:
     )
 
 
+def _run_roundtable_blocking(ctx: YushiContext, spec: ChallengeSpec) -> dict[str, Any]:
+    roundtable = ctx.signals.get("roundtable")
+    if not roundtable:
+        return _make_result(
+            spec,
+            case="检查动态委员会阻断规则",
+            expected="仅在存在 roundtable 信号时检查",
+            observed="no roundtable signals",
+            status="skipped",
+            recommendation="非 roundtable 任务可跳过该测试。",
+        )
+
+    if roundtable.get("guardian_veto_triggered"):
+        return _make_result(
+            spec,
+            case="检查动态委员会阻断规则",
+            expected="guardian veto 不得被忽略",
+            observed="guardian_veto_triggered=true",
+            status="fail",
+            severity="critical",
+            recommendation="升级到 guardian 或用户决策，不得继续执行。",
+        )
+    if roundtable.get("blocking_minority_present"):
+        return _make_result(
+            spec,
+            case="检查动态委员会阻断规则",
+            expected="blocking minority 必须先被解决",
+            observed=f"blocking_points={roundtable.get('blocking_points', [])}",
+            status="fail",
+            severity="critical",
+            recommendation="先解决 blocking minority，再进入执行或提交。",
+        )
+    if roundtable.get("forbid_overridden"):
+        return _make_result(
+            spec,
+            case="检查动态委员会阻断规则",
+            expected="forbid_majority_override_on 不得被多数票覆盖",
+            observed=f"forbid_overridden={roundtable.get('forbid_overridden', [])}",
+            status="fail",
+            severity="critical",
+            recommendation="记录违规并升级治理决策。",
+        )
+    return _make_result(
+        spec,
+        case="检查动态委员会阻断规则",
+        expected="委员会阻断规则应全部满足",
+        observed="no unresolved committee blocking rule",
+        status="pass",
+        severity="low",
+        recommendation="可继续后续 challenge 判定。",
+    )
+
+
 DEFAULT_TEST_LIBRARY: list[ChallengeSpec] = [
     ChallengeSpec(
         test_id="YU-CE-01",
@@ -263,6 +316,13 @@ DEFAULT_TEST_LIBRARY: list[ChallengeSpec] = [
         severity_default="med",
         estimated_cost=EstimatedCost(token=90, time_ms=30),
         handler=_run_fidelity,
+    ),
+    ChallengeSpec(
+        test_id="YU-RT-01",
+        category="commit_gate",
+        severity_default="critical",
+        estimated_cost=EstimatedCost(token=70, time_ms=25),
+        handler=_run_roundtable_blocking,
     ),
 ]
 

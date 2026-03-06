@@ -338,6 +338,126 @@ class FidelitySignalsExtractor:
         }
 
 
+class ExplorationSignalsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.RESULT)
+        if artifact is None or artifact.envelope.body.exploration_outcome is None:
+            return {}
+        result = artifact.envelope.body
+        exploration = result.exploration_outcome
+        budget = artifact.envelope.budget
+        return {
+            "signals": {
+                "exploration": {
+                    "questions_resolved": list(exploration.questions_resolved),
+                    "hypotheses_rejected": list(exploration.hypotheses_rejected),
+                    "viable_options": [item.model_dump(mode="json") for item in exploration.viable_options],
+                    "negative_findings": list(exploration.negative_findings),
+                    "recommended_next_step": exploration.recommended_next_step,
+                    "stop_condition_met": bool(exploration.recommended_next_step),
+                    "budget_exhausted": budget.token_used >= budget.token_cap if budget.token_cap else False,
+                    "spawns_production": result.expected_receipt_type is not None,
+                    "overall": "complete" if exploration.recommended_next_step else "partial",
+                }
+            }
+        }
+
+
+class ReceiptSignalsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.EXTERNAL_COMMIT_RECEIPT)
+        if artifact is None:
+            artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.PUBLISH_RECEIPT)
+        if artifact is None:
+            return {}
+
+        body = artifact.envelope.body
+        challenge_artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.CHALLENGE_REPORT)
+        review_artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.REVIEW_REPORT)
+        challenge_commit_gate = (
+            challenge_artifact.envelope.body.overall.commit_gate if challenge_artifact is not None else None
+        )
+        review_digest = (
+            review_artifact.envelope.body.approval_binding.approval_digest if review_artifact is not None else None
+        )
+        evidence_complete = bool(getattr(body, "evidence", []))
+        rollback_available = getattr(body, "rollback_handle", None) is not None
+        approval_binding_valid = (
+            review_digest == body.approval_binding_digest
+            and (challenge_commit_gate is None or challenge_commit_gate == body.commit_gate_snapshot)
+        )
+        overall = "pass"
+        if not approval_binding_valid or not evidence_complete:
+            overall = "fail"
+        elif not rollback_available or body.status in {"partial_success", "rolled_back"}:
+            overall = "warning"
+
+        target_system = getattr(body, "target_system", getattr(body, "target_platform", "unknown"))
+        target_action = getattr(body, "target_action", getattr(body, "publish_type", "other"))
+        return {
+            "signals": {
+                "receipt": {
+                    "status": body.status,
+                    "target_system": target_system,
+                    "target_action": target_action,
+                    "commit_gate_snapshot": body.commit_gate_snapshot,
+                    "approval_binding_valid": approval_binding_valid,
+                    "evidence_complete": evidence_complete,
+                    "rollback_available": rollback_available,
+                    "overall": overall,
+                }
+            }
+        }
+
+
+def _map_reason_type_to_forbid(reason_type: str) -> str:
+    mapping = {
+        "policy": "policy",
+        "capability": "capability",
+        "compliance": "compliance",
+        "external_side_effect": "external_side_effect",
+    }
+    return mapping.get(reason_type, "")
+
+
+class RoundtableSignalsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        final_report = store.resolve_effective_artifact(task.task_id, ArtifactType.FINAL_REPORT)
+        if final_report is None:
+            return {}
+
+        agenda = store.resolve_effective_artifact(task.task_id, ArtifactType.AGENDA)
+        round_summaries = [
+            event for event in task_events if event.envelope.header.artifact_type == ArtifactType.ROUND_SUMMARY
+        ]
+        final_body = final_report.envelope.body
+        blocking_items = [item for item in final_body.blocking_minority if item.status == "unresolved"]
+        forbid_overridden: list[str] = []
+        if agenda is not None and final_body.decision_rule_used == "majority":
+            forbidden = set(agenda.envelope.body.forbid_majority_override_on)
+            for item in blocking_items:
+                mapped = _map_reason_type_to_forbid(item.reason_type)
+                if mapped and mapped in forbidden and mapped not in forbid_overridden:
+                    forbid_overridden.append(mapped)
+
+        return {
+            "signals": {
+                "roundtable": {
+                    "decision_type": final_body.decision_type,
+                    "decision_rule_used": final_body.decision_rule_used,
+                    "participant_count": len(final_body.participant_roster),
+                    "rounds_completed": len(round_summaries),
+                    "consensus_reached": final_body.decision_type == "consensus",
+                    "guardian_veto_triggered": final_body.decision_rule_used == "guardian_veto",
+                    "blocking_minority_present": bool(blocking_items),
+                    "blocking_points": [item.point for item in blocking_items],
+                    "forbid_overridden": forbid_overridden,
+                    "recommendation": final_body.recommendation,
+                }
+            }
+        }
+
+
 DEFAULT_EXTRACTOR_PIPELINE: list[Extractor] = [
     TaskMetaExtractor(),
     ScoresExtractor(),
@@ -348,6 +468,9 @@ DEFAULT_EXTRACTOR_PIPELINE: list[Extractor] = [
     ResultSignalsExtractor(),
     GovernanceSnapshotSignalsExtractor(),
     FidelitySignalsExtractor(),
+    ExplorationSignalsExtractor(),
+    ReceiptSignalsExtractor(),
+    RoundtableSignalsExtractor(),
 ]
 
 
