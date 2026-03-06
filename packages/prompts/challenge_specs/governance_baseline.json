@@ -35,6 +35,20 @@
     "handler": "fidelity"
   },
   {
+    "test_id": "YU-SEC-00",
+    "category": "security",
+    "severity_default": "high",
+    "estimated_cost": {"token": 75, "time_ms": 20},
+    "handler": "security_scan"
+  },
+  {
+    "test_id": "YU-SEC-01",
+    "category": "security",
+    "severity_default": "critical",
+    "estimated_cost": {"token": 180, "time_ms": 80},
+    "handler": "adversarial_prompt"
+  },
+  {
     "test_id": "YU-RT-01",
     "category": "commit_gate",
     "severity_default": "critical",

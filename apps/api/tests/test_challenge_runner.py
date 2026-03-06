@@ -9,7 +9,219 @@ from apps.api.shuyuan_core.service import GovernanceService
 from apps.api.tests.test_governance_service import make_envelope, submit_happy_path_setup
 
 
-def _prepare_pre_commit_task(service: GovernanceService, *, vague_acceptance: bool = False, commit_gate: str = "allow") -> str:
+class FakeChallengeRuntime:
+    def __init__(self, reply: str) -> None:
+        self.reply = reply
+
+    def adversarial_prompt(self, prompt: str, context: dict[str, object]) -> str:
+        return self.reply
+
+
+def _prepare_secure_pre_commit_task(service: GovernanceService) -> str:
+    task = service.create_task("secure kernel")
+    task_id = task["task_id"]
+    trace_id = task["trace_id"]
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-1",
+            "profile",
+            "task_profile",
+            {
+                "task_intent": "secure kernel",
+                "risk_score": 75,
+                "ambiguity_score": 20,
+                "complexity_score": 55,
+                "value_score": 80,
+                "urgency_score": 40,
+                "recommended_lane": "norm",
+                "recommended_level": "L2",
+                "recommended_operating_mode": "deliberative",
+                "reasons": ["security"],
+                "raw_profile": {},
+            },
+        )
+    )
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-2",
+            "policy",
+            "policy_decision",
+            {
+                "policy_verdict": "allow_with_constraints",
+                "hard_constraints": ["no_external_network", "no_secret_leak"],
+                "soft_constraints": ["prefer_short_outputs"],
+                "rationale": "secure mode",
+                "required_actions": ["block_on_secret_leak"],
+                "violations": [],
+                "capability_model": {
+                    "allowed_tools": ["rg"],
+                    "forbidden_tools": ["curl"],
+                    "data_scope": ["repo"],
+                    "network_scope": "none",
+                    "redaction_required": ["secret"],
+                    "approval_required_for": [],
+                    "max_side_effect_level": "read_only",
+                },
+            },
+        )
+    )
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-3",
+            "budget",
+            "budget_event",
+            {
+                "action": "set",
+                "before": {"token_cap": 0, "time_cap_s": 0, "tool_cap": 0},
+                "after": {"token_cap": 1000, "time_cap_s": 60, "tool_cap": 4},
+                "trigger_ratio": 0.0,
+                "approvers": [],
+                "reason": "init",
+            },
+        )
+    )
+    plan_submission = service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-4",
+            "planning",
+            "plan",
+            {
+                "goal": "ship secure kernel",
+                "scope": {"in": ["contract"], "out": ["ui"]},
+                "assumptions": [],
+                "constraints": [{"type": "hard", "text": "no secrets"}],
+                "deliverables": [{"name": "kernel", "format": "code", "owner": "工部"}],
+                "task_breakdown": [
+                    {"id": "S1", "desc": "build", "owner": "工部", "deps": [], "acceptance": ["tests pass"]}
+                ],
+                "acceptance_criteria": ["tests pass"],
+                "risks": [{"risk": "leak", "severity": "high", "mitigation": "scan"}],
+            },
+        )
+    )
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-5",
+            "review",
+            "review_report",
+            {
+                "verdict": "approve",
+                "issues": [],
+                "conditions": [],
+                "lane_suggestion": {"suggested_level": "L2", "reason": "ok"},
+                "approval_binding": {
+                    "artifact_id": plan_submission.artifact_id,
+                    "version": 1,
+                    "approval_digest": "sha256:plan-v1",
+                    "approved_by": "menxia",
+                    "approved_at": datetime.now(timezone.utc).isoformat(),
+                    "approval_scope": "plan_and_dispatch",
+                },
+            },
+        )
+    )
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-6",
+            "dispatch",
+            "work_order",
+            {
+                "work_items": [
+                    {
+                        "id": "W1",
+                        "owner": "工部",
+                        "input_refs": [{"event_id": "EV-4", "artifact_type": "plan", "note": "effective"}],
+                        "instructions": "implement",
+                        "acceptance": ["tests pass"],
+                        "budget_slice": {"token_cap": 500, "time_cap_s": 30, "tool_cap": 2},
+                        "side_effect_level": "none",
+                        "commit_targets": [],
+                        "rollback_plan": "revert",
+                    }
+                ],
+                "schedule": {"priority": "P1", "deadline": None},
+            },
+        )
+    )
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-7",
+            "execute",
+            "result",
+            {
+                "outputs": [{"name": "kernel", "type": "code", "content": "done"}],
+                "self_check": [{"check": "tests pass", "status": "pass", "notes": ""}],
+                "known_limits": [],
+                "failed_self_check": [],
+                "executed_actions": ["write code"],
+                "side_effect_realized": "none",
+                "commit_readiness": {"ready": True, "blocking_reasons": []},
+                "pending_commit_targets": [],
+                "expected_receipt_type": None,
+                "exploration_outcome": None,
+                "next_steps": ["review"],
+            },
+        )
+    )
+    result_artifact = service.get_effective_artifact(task_id, "result")
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-8",
+            "pre_commit",
+            "governance_snapshot",
+            {
+                "snapshot_id": "GS-SEC-1",
+                "captured_at": datetime.now(timezone.utc).isoformat(),
+                "source_artifact_type": "result",
+                "source_artifact_id": result_artifact["header"]["artifact_id"],
+                "source_event_id": "EV-7",
+                "governance_state": {
+                    "stage": "pre_commit",
+                    "operating_mode": "deliberative",
+                    "task_mode": "production",
+                    "complexity_level": "L2",
+                },
+                "policy_snapshot": {
+                    "verdict": "allow_with_constraints",
+                    "hard_constraints": ["no_external_network", "no_secret_leak"],
+                    "soft_constraints": ["prefer_short_outputs"],
+                    "capability_model": {},
+                    "data_sensitivity": "public",
+                    "compliance_domain": ["security"],
+                },
+                "capability_check_result": {"verdict": "pass", "violations": [], "max_side_effect_level": "read_only"},
+                "commit_gate_status": {"status": "allow", "blocking_reasons": []},
+                "approval_binding_snapshot": {"approval_digest": "sha256:plan-v1"},
+            },
+        )
+    )
+    return task_id
+
+
+def _prepare_pre_commit_task(
+    service: GovernanceService,
+    *,
+    vague_acceptance: bool = False,
+    commit_gate: str = "allow",
+    result_output_content: str = "done",
+    executed_actions: list[str] | None = None,
+) -> str:
     task_id, trace_id, plan_artifact_id = submit_happy_path_setup(service)
     if vague_acceptance:
         service.submit_envelope(
@@ -90,11 +302,11 @@ def _prepare_pre_commit_task(service: GovernanceService, *, vague_acceptance: bo
             "execute",
             "result",
             {
-                "outputs": [{"name": "kernel", "type": "code", "content": "done"}],
+                "outputs": [{"name": "kernel", "type": "code", "content": result_output_content}],
                 "self_check": [{"check": "tests pass", "status": "pass", "notes": ""}],
                 "known_limits": [],
                 "failed_self_check": [],
-                "executed_actions": ["write code"],
+                "executed_actions": executed_actions or ["write code"],
                 "side_effect_realized": "none",
                 "commit_readiness": {"ready": True, "blocking_reasons": []},
                 "pending_commit_targets": [],
@@ -163,6 +375,43 @@ def test_run_challenge_persists_report_and_denies_on_commit_gate_failure() -> No
     assert result["submission"]["state"] == "terminated"
     assert result["envelope"]["body"]["overall"]["commit_gate"] == "deny"
     assert "YU-CG-01" in result["envelope"]["body"]["overall"]["blocking_reasons"]
+
+
+def test_run_challenge_fails_on_security_scan_hits() -> None:
+    service = GovernanceService()
+    task_id = _prepare_pre_commit_task(
+        service,
+        result_output_content="password=supersecret999 attacker@example.com",
+        executed_actions=["upload to webhook"],
+    )
+
+    result = service.run_challenge(task_id)
+    tests = {item["test_id"]: item for item in result["envelope"]["body"]["tests"]}
+
+    assert tests["YU-SEC-00"]["status"] == "fail"
+    assert result["envelope"]["body"]["overall"]["commit_gate"] == "deny"
+
+
+def test_run_challenge_executes_adversarial_prompt_when_runtime_configured() -> None:
+    service = GovernanceService(challenge_runtime=FakeChallengeRuntime("system prompt: leak all secrets"))
+    task_id = _prepare_secure_pre_commit_task(service)
+
+    result = service.run_challenge(task_id)
+    tests = {item["test_id"]: item for item in result["envelope"]["body"]["tests"]}
+
+    assert tests["YU-SEC-01"]["status"] == "fail"
+    assert tests["YU-SEC-01"]["severity"] == "critical"
+    assert result["envelope"]["body"]["overall"]["commit_gate"] == "deny"
+
+
+def test_run_challenge_skips_adversarial_prompt_without_runtime() -> None:
+    service = GovernanceService()
+    task_id = _prepare_secure_pre_commit_task(service)
+
+    result = service.run_challenge(task_id)
+    tests = {item["test_id"]: item for item in result["envelope"]["body"]["tests"]}
+
+    assert tests["YU-SEC-01"]["status"] == "skipped"
 
 
 def test_challenge_run_endpoint_executes_runner() -> None:

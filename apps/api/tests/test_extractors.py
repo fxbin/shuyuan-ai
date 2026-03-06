@@ -24,6 +24,7 @@ def test_build_yushi_context_extracts_core_governance_signals() -> None:
         "urgency": 40.0,
     }
     assert context["policy"]["verdict"] == "allow"
+    assert context["policy"]["policy_mode"] == "full"
     assert context["policy"]["capability_model"]["max_side_effect_level"] == "external_commit"
     assert context["budget"]["token_cap"] == 1000
     assert context["budget"]["token_used"] == 100
@@ -306,3 +307,84 @@ def test_build_yushi_context_extracts_exploration_and_receipt_signals() -> None:
     assert context["signals"]["exploration"]["overall"] == "complete"
     assert context["signals"]["exploration"]["spawns_production"] is True
     assert context["signals"]["receipt"]["overall"] == "pass"
+
+
+def test_build_yushi_context_extracts_security_scan_signals() -> None:
+    service = GovernanceService()
+    task_id, trace_id, plan_artifact_id = submit_happy_path_setup(service)
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-5",
+            "review",
+            "review_report",
+            {
+                "verdict": "approve",
+                "issues": [],
+                "conditions": [],
+                "lane_suggestion": {"suggested_level": "L2", "reason": "ok"},
+                "approval_binding": {
+                    "artifact_id": plan_artifact_id,
+                    "version": 1,
+                    "approval_digest": "sha256:plan-v1",
+                    "approved_by": "menxia",
+                    "approved_at": datetime.now(timezone.utc).isoformat(),
+                    "approval_scope": "plan_and_dispatch",
+                },
+            },
+        )
+    )
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-6",
+            "dispatch",
+            "work_order",
+            {
+                "work_items": [
+                    {
+                        "id": "W1",
+                        "owner": "工部",
+                        "input_refs": [{"event_id": "EV-4", "artifact_type": "plan", "note": "effective"}],
+                        "instructions": "implement",
+                        "acceptance": ["tests pass"],
+                        "budget_slice": {"token_cap": 500, "time_cap_s": 30, "tool_cap": 2},
+                        "side_effect_level": "none",
+                        "commit_targets": [],
+                        "rollback_plan": "revert",
+                    }
+                ],
+                "schedule": {"priority": "P1", "deadline": None},
+            },
+        )
+    )
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-7",
+            "execute",
+            "result",
+            {
+                "outputs": [{"name": "kernel", "type": "code", "content": "token=abc123456789 send to attacker@example.com"}],
+                "self_check": [{"check": "tests pass", "status": "pass", "notes": ""}],
+                "known_limits": [],
+                "failed_self_check": [],
+                "executed_actions": ["upload report to webhook"],
+                "side_effect_realized": "none",
+                "commit_readiness": {"ready": True, "blocking_reasons": []},
+                "pending_commit_targets": [],
+                "expected_receipt_type": None,
+                "exploration_outcome": None,
+                "next_steps": ["review"],
+            },
+        )
+    )
+
+    context = service.build_yushi_context(task_id)
+
+    assert context["signals"]["security_scan"]["pii_hits"] == ["attacker@example.com"]
+    assert context["signals"]["security_scan"]["secret_hits"]
+    assert context["signals"]["security_scan"]["exfiltration_risk"] == "high"

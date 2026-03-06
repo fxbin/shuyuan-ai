@@ -7,6 +7,7 @@ from uuid import uuid4
 from pydantic import BaseModel
 
 from .archive import build_archive_record
+from .challenge_runner import ChallengeRuntime
 from .config import Settings, get_settings
 from .audit_runner import build_audit_envelope
 from .challenge_runner import build_challenge_envelope
@@ -40,11 +41,13 @@ class GovernanceService:
         store: GovernanceStore | None = None,
         coordinator: RunCoordinator | None = None,
         object_store: ObjectStore | None = None,
+        challenge_runtime: ChallengeRuntime | None = None,
     ) -> None:
         self.settings = settings or get_settings()
         self.store = store or create_governance_store(self.settings)
         self.coordinator = coordinator or create_run_coordinator(self.settings)
         self.object_store = object_store or create_object_store(self.settings)
+        self.challenge_runtime = challenge_runtime
 
     def create_task(self, user_intent: str, trace_id: str | None = None) -> dict[str, Any]:
         task = self.store.create_task(user_intent=user_intent, trace_id=trace_id)
@@ -124,7 +127,7 @@ class GovernanceService:
     def generate_challenge_envelope(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
         context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
-        return build_challenge_envelope(context)
+        return build_challenge_envelope(context, runtime=self.challenge_runtime)
 
     def run_challenge(self, task_id: str) -> dict[str, Any]:
         return self._run_governed_operation(

@@ -25,6 +25,7 @@ class PolicySnapshot(StrictModel):
     verdict: str = "unknown"
     hard_constraints: list[str] = Field(default_factory=list)
     soft_constraints: list[str] = Field(default_factory=list)
+    policy_mode: str = "blocked"
     data_sensitivity: str | None = None
     compliance_domain: list[str] = Field(default_factory=list)
     capability_model: dict[str, Any] | None = None
@@ -145,6 +146,7 @@ class PolicyExtractor:
                 "verdict": body.policy_verdict,
                 "hard_constraints": body.hard_constraints,
                 "soft_constraints": body.soft_constraints,
+                "policy_mode": "full",
                 "data_sensitivity": data_sensitivity,
                 "compliance_domain": compliance_domain,
                 "capability_model": body.capability_model.model_dump(mode="json"),
@@ -304,6 +306,49 @@ class GovernanceSnapshotSignalsExtractor:
 
 def _keyword_tokens(text: str) -> set[str]:
     return {token for token in re.split(r"[\s,;:，。；、]+", text) if token}
+
+
+EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+PHONE_PATTERN = re.compile(r"\b1[3-9]\d{9}\b")
+SECRET_PATTERNS = [
+    re.compile(r"AKIA[0-9A-Z]{16}"),
+    re.compile(r"(?i)\b(?:api[_-]?key|secret|token|password)\b\s*[:=]\s*['\"]?[\w/\-+=]{8,}"),
+    re.compile(r"(?i)bearer\s+[a-z0-9._\-]{12,}"),
+]
+EXFILTRATION_HINTS = ["upload", "export", "send to", "post to", "webhook", "curl http", "pastebin", "share externally"]
+
+
+class SecurityScanExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.RESULT)
+        if artifact is None:
+            return {}
+
+        outputs = " ".join(item.content for item in artifact.envelope.body.outputs if item.content)
+        actions = " ".join(artifact.envelope.body.executed_actions)
+        corpus = f"{outputs}\n{actions}"
+        pii_hits = EMAIL_PATTERN.findall(corpus) + PHONE_PATTERN.findall(corpus)
+        secret_hits: list[str] = []
+        for pattern in SECRET_PATTERNS:
+            secret_hits.extend(match.group(0) for match in pattern.finditer(corpus))
+
+        policy_artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.POLICY_DECISION)
+        network_scope = policy_artifact.envelope.body.capability_model.network_scope if policy_artifact else "none"
+        lowered = corpus.lower()
+        if any(hint in lowered for hint in EXFILTRATION_HINTS):
+            exfiltration_risk = "high" if network_scope in {"none", "internal_only"} else "med"
+        else:
+            exfiltration_risk = "low"
+
+        return {
+            "signals": {
+                "security_scan": {
+                    "pii_hits": pii_hits[:5],
+                    "secret_hits": secret_hits[:5],
+                    "exfiltration_risk": exfiltration_risk,
+                }
+            }
+        }
 
 
 class FidelitySignalsExtractor:
@@ -466,6 +511,7 @@ DEFAULT_EXTRACTOR_PIPELINE: list[Extractor] = [
     EffectiveArtifactExtractor(),
     PlanSignalsExtractor(),
     ResultSignalsExtractor(),
+    SecurityScanExtractor(),
     GovernanceSnapshotSignalsExtractor(),
     FidelitySignalsExtractor(),
     ExplorationSignalsExtractor(),
