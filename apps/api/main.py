@@ -5,7 +5,7 @@ from apps.api.shuyuan_core.app import app
 
 def main() -> None:
     uvicorn.run(
-        "apps.api.shuyuan_core.app:app",
+        "apps.api.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,

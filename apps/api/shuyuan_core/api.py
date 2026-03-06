@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from .config import get_settings
 from .enums import ArtifactType
 from .service import GovernanceError, GovernanceService
+from packages.schemas import get_named_schema, list_schema_catalog
 
 
 class CreateTaskRequest(BaseModel):
@@ -28,6 +29,17 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
     @router.post("/tasks")
     async def create_task(request: CreateTaskRequest) -> dict[str, Any]:
         return svc.create_task(user_intent=request.user_intent, trace_id=request.trace_id)
+
+    @router.get("/schemas")
+    async def list_schemas() -> list[dict[str, str]]:
+        return list_schema_catalog()
+
+    @router.get("/schemas/{schema_name}")
+    async def get_schema(schema_name: str) -> dict[str, Any]:
+        try:
+            return get_named_schema(schema_name)
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=f"schema not found: {schema_name}") from exc
 
     @router.get("/tasks/{task_id}")
     async def get_task(task_id: str) -> dict[str, Any]:
