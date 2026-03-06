@@ -30,6 +30,9 @@ dev = [
 testpaths = ["apps/api/tests"]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
+markers = [
+  "postgres_integration: requires a reachable PostgreSQL instance"
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
