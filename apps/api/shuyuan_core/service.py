@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 from uuid import uuid4
 
 from pydantic import BaseModel
 
+from .config import Settings, get_settings
 from .audit_runner import build_audit_envelope
 from .challenge_runner import build_challenge_envelope
-from .coordination import CoordinationError, RunCoordinator, create_run_coordinator
+from .coordination import CoordinationError, Lease, RunCoordinator, create_run_coordinator
 from .enums import ArtifactType, EffectiveStatus, TaskMode, TaskState
 from .envelope import StrictEnvelope
 from .extractors import build_yushi_context
@@ -33,13 +34,15 @@ class GovernanceError(ValueError):
 class GovernanceService:
     def __init__(
         self,
+        settings: Settings | None = None,
         store: GovernanceStore | None = None,
         coordinator: RunCoordinator | None = None,
         object_store: ObjectStore | None = None,
     ) -> None:
-        self.store = store or create_governance_store()
-        self.coordinator = coordinator or create_run_coordinator()
-        self.object_store = object_store or create_object_store()
+        self.settings = settings or get_settings()
+        self.store = store or create_governance_store(self.settings)
+        self.coordinator = coordinator or create_run_coordinator(self.settings)
+        self.object_store = object_store or create_object_store(self.settings)
 
     def create_task(self, user_intent: str, trace_id: str | None = None) -> dict[str, Any]:
         task = self.store.create_task(user_intent=user_intent, trace_id=trace_id)
@@ -50,6 +53,7 @@ class GovernanceService:
         task = self.store.get_task(envelope.header.task_id)
         if task.trace_id != envelope.header.trace_id:
             raise GovernanceError("trace_id does not match task")
+        receipt_lease: Lease | None = None
         if envelope.header.artifact_type in {
             ArtifactType.EXTERNAL_COMMIT_RECEIPT,
             ArtifactType.PUBLISH_RECEIPT,
@@ -58,12 +62,18 @@ class GovernanceService:
                 envelope.header.task_id,
                 getattr(envelope.body, "request_idempotency_key", None),
             )
-        envelope = self._attach_object_store_refs(envelope)
-
-        envelope = self._hydrate_artifact_identity(envelope)
-        next_state = self._resolve_next_state(task.current_state, envelope)
-
-        self.store.persist_submission(envelope, next_state)
+            receipt_lease = self._reserve_receipt_idempotency(
+                envelope.header.task_id,
+                getattr(envelope.body, "request_idempotency_key", None),
+            )
+        try:
+            envelope = self._attach_object_store_refs(envelope)
+            envelope = self._hydrate_artifact_identity(envelope)
+            next_state = self._resolve_next_state(task.current_state, envelope)
+            self.store.persist_submission(envelope, next_state)
+        except Exception:
+            self._release_receipt_idempotency(receipt_lease)
+            raise
 
         return SubmissionResult(
             task_id=envelope.header.task_id,
@@ -93,23 +103,29 @@ class GovernanceService:
         context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
         return context.model_dump(mode="json")
 
+    def get_operation_status(self, task_id: str, operation: str) -> dict[str, Any]:
+        self.store.get_task(task_id)
+        state = self.coordinator.read_state(self._operation_state_key(task_id, operation))
+        if state is not None:
+            return state
+        return {
+            "task_id": task_id,
+            "operation": operation,
+            "status": "idle",
+        }
+
     def generate_challenge_envelope(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
         context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
         return build_challenge_envelope(context)
 
     def run_challenge(self, task_id: str) -> dict[str, Any]:
-        try:
-            with self.coordinator.hold(f"challenge:{task_id}", ttl_s=30):
-                envelope = self.generate_challenge_envelope(task_id)
-                submission = self.submit_envelope(envelope)
-                persisted = self.get_effective_artifact(task_id, ArtifactType.CHALLENGE_REPORT)
-                return {
-                    "submission": submission.model_dump(mode="json"),
-                    "envelope": persisted or envelope,
-                }
-        except CoordinationError as exc:
-            raise GovernanceError(str(exc)) from exc
+        return self._run_governed_operation(
+            task_id=task_id,
+            operation="challenge",
+            artifact_type=ArtifactType.CHALLENGE_REPORT,
+            builder=self.generate_challenge_envelope,
+        )
 
     def generate_audit_envelope(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
@@ -117,17 +133,12 @@ class GovernanceService:
         return build_audit_envelope(context)
 
     def run_audit(self, task_id: str) -> dict[str, Any]:
-        try:
-            with self.coordinator.hold(f"audit:{task_id}", ttl_s=30):
-                envelope = self.generate_audit_envelope(task_id)
-                submission = self.submit_envelope(envelope)
-                persisted = self.get_effective_artifact(task_id, ArtifactType.AUDIT_REPORT)
-                return {
-                    "submission": submission.model_dump(mode="json"),
-                    "envelope": persisted or envelope,
-                }
-        except CoordinationError as exc:
-            raise GovernanceError(str(exc)) from exc
+        return self._run_governed_operation(
+            task_id=task_id,
+            operation="audit",
+            artifact_type=ArtifactType.AUDIT_REPORT,
+            builder=self.generate_audit_envelope,
+        )
 
     def archive_task(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
@@ -136,6 +147,62 @@ class GovernanceService:
         self._validate_archive_readiness(task_id)
         archived = self.store.update_task_state(task_id, TaskState.ARCHIVED)
         return archived.model_dump(mode="json")
+
+    def _run_governed_operation(
+        self,
+        task_id: str,
+        operation: str,
+        artifact_type: ArtifactType,
+        builder: Callable[[str], dict[str, Any]],
+    ) -> dict[str, Any]:
+        lock_key = f"{operation}:{task_id}"
+        state_key = self._operation_state_key(task_id, operation)
+        try:
+            with self.coordinator.hold(lock_key, ttl_s=self.settings.run_lock_ttl_s):
+                self.coordinator.write_state(
+                    state_key,
+                    {
+                        "task_id": task_id,
+                        "operation": operation,
+                        "status": "running",
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    ttl_s=self.settings.short_state_ttl_s,
+                )
+                envelope = builder(task_id)
+                submission = self.submit_envelope(envelope)
+                persisted = self.get_effective_artifact(task_id, artifact_type)
+                self.coordinator.write_state(
+                    state_key,
+                    {
+                        "task_id": task_id,
+                        "operation": operation,
+                        "status": "completed",
+                        "event_id": submission.event_id,
+                        "artifact_type": artifact_type.value,
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    ttl_s=self.settings.short_state_ttl_s,
+                )
+                return {
+                    "submission": submission.model_dump(mode="json"),
+                    "envelope": persisted or envelope,
+                }
+        except GovernanceError as exc:
+            self.coordinator.write_state(
+                state_key,
+                {
+                    "task_id": task_id,
+                    "operation": operation,
+                    "status": "failed",
+                    "error": str(exc),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+                ttl_s=self.settings.short_state_ttl_s,
+            )
+            raise
+        except CoordinationError as exc:
+            raise GovernanceError(str(exc)) from exc
 
     def _hydrate_artifact_identity(self, envelope: StrictEnvelope) -> StrictEnvelope:
         header = envelope.header
@@ -369,6 +436,27 @@ class GovernanceService:
                 continue
             if getattr(event.envelope.body, "request_idempotency_key", None) == request_idempotency_key:
                 raise GovernanceError("duplicate request_idempotency_key for receipt")
+
+    def _reserve_receipt_idempotency(self, task_id: str, request_idempotency_key: str | None) -> Lease | None:
+        if not request_idempotency_key:
+            return None
+        lease = self.coordinator.acquire(
+            self._receipt_idempotency_key(task_id, request_idempotency_key),
+            ttl_s=self.settings.receipt_idempotency_ttl_s,
+        )
+        if lease is None:
+            raise GovernanceError("duplicate request_idempotency_key for receipt")
+        return lease
+
+    def _release_receipt_idempotency(self, lease: Lease | None) -> None:
+        if lease is not None:
+            self.coordinator.release(lease)
+
+    def _operation_state_key(self, task_id: str, operation: str) -> str:
+        return f"runstate:{operation}:{task_id}"
+
+    def _receipt_idempotency_key(self, task_id: str, request_idempotency_key: str) -> str:
+        return f"receipt-idempotency:{task_id}:{request_idempotency_key}"
 
     def _validate_archive_readiness(self, task_id: str) -> None:
         events = self.store.list_events(task_id)

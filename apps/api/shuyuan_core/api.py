@@ -69,6 +69,13 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    @router.get("/tasks/{task_id}/operations/{operation}")
+    async def get_operation_status(task_id: str, operation: str) -> dict[str, Any]:
+        try:
+            return svc.get_operation_status(task_id, operation)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
     @router.post("/tasks/{task_id}/challenge/run")
     async def run_challenge(task_id: str) -> dict[str, Any]:
         try:
