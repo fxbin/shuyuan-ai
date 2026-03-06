@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
+from .challenge_runner import build_challenge_envelope
 from .enums import ArtifactType, EffectiveStatus, TaskMode, TaskState
 from .envelope import StrictEnvelope
 from .extractors import build_yushi_context
@@ -72,6 +73,19 @@ class GovernanceService:
         task = self.store.get_task(task_id)
         context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
         return context.model_dump(mode="json")
+
+    def generate_challenge_envelope(self, task_id: str) -> dict[str, Any]:
+        task = self.store.get_task(task_id)
+        context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
+        return build_challenge_envelope(context)
+
+    def run_challenge(self, task_id: str) -> dict[str, Any]:
+        envelope = self.generate_challenge_envelope(task_id)
+        submission = self.submit_envelope(envelope)
+        return {
+            "submission": submission.model_dump(mode="json"),
+            "envelope": envelope,
+        }
 
     def archive_task(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)

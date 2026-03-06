@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Protocol
+
+from pydantic import Field
 
 from .enums import ArtifactType, ComplexityLevel, EffectiveStatus, Lane
 from .models import GovernanceCarryover, StrictModel
 from .store import EventRecord, GovernanceStore, TaskRecord
+
+VAGUE_KEYWORDS = ["尽量", "优化", "提升", "更好", "合理", "适当", "完善", "增强", "显著"]
+VERIFY_HINTS = ["必须", "应当", "通过", "覆盖", "返回", "输出包含", ">=", "<=", "%", "用例", "测试", "校验"]
 
 
 class ScoreSnapshot(StrictModel):
@@ -17,13 +23,13 @@ class ScoreSnapshot(StrictModel):
 
 class PolicySnapshot(StrictModel):
     verdict: str = "unknown"
-    hard_constraints: list[str] = []
-    soft_constraints: list[str] = []
+    hard_constraints: list[str] = Field(default_factory=list)
+    soft_constraints: list[str] = Field(default_factory=list)
     data_sensitivity: str | None = None
-    compliance_domain: list[str] = []
+    compliance_domain: list[str] = Field(default_factory=list)
     capability_model: dict[str, Any] | None = None
-    required_actions: list[str] = []
-    violations: list[str] = []
+    required_actions: list[str] = Field(default_factory=list)
+    violations: list[str] = Field(default_factory=list)
 
 
 class BudgetSnapshot(StrictModel):
@@ -200,12 +206,148 @@ class EffectiveArtifactExtractor:
         }
 
 
+def _testability_score(items: list[str]) -> dict[str, Any]:
+    vague_hits: set[str] = set()
+    vague_count = 0
+    for item in items:
+        has_vague = any(keyword in item for keyword in VAGUE_KEYWORDS)
+        has_verify = any(hint in item for hint in VERIFY_HINTS)
+        if has_vague and not has_verify:
+            vague_count += 1
+            for keyword in VAGUE_KEYWORDS:
+                if keyword in item:
+                    vague_hits.add(keyword)
+    ratio = vague_count / max(1, len(items))
+    return {"vague_ratio": ratio, "vague_hits": sorted(vague_hits)}
+
+
+class PlanSignalsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.PLAN)
+        if artifact is None:
+            return {}
+        body = artifact.envelope.body
+        deliverable_contract = [
+            item.model_dump(mode="json")
+            for item in body.deliverables
+        ]
+        return {
+            "signals": {
+                "acceptance_items": list(body.acceptance_criteria),
+                "acceptance_testability": _testability_score(list(body.acceptance_criteria)),
+                "deliverable_contract": deliverable_contract,
+            }
+        }
+
+
+def _cover_deliverables(contract: list[dict[str, Any]], outputs: list[dict[str, Any]]) -> dict[str, Any]:
+    outputs_by_name = {item["name"]: item for item in outputs}
+    missing: list[str] = []
+    format_mismatch: list[dict[str, str]] = []
+    for deliverable in contract:
+        output = outputs_by_name.get(deliverable["name"])
+        if output is None:
+            missing.append(deliverable["name"])
+            continue
+        if deliverable["format"] != output["type"]:
+            format_mismatch.append(
+                {
+                    "name": deliverable["name"],
+                    "expected": deliverable["format"],
+                    "got": output["type"],
+                }
+            )
+    return {"missing": missing, "format_mismatch": format_mismatch}
+
+
+class ResultSignalsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.RESULT)
+        if artifact is None:
+            return {}
+        body = artifact.envelope.body
+        outputs = [item.model_dump(mode="json") for item in body.outputs]
+        self_check_summary = {"pass": 0, "fail": 0, "unknown": 0}
+        for check in body.self_check:
+            self_check_summary[check.status] += 1
+
+        contract = []
+        plan_artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.PLAN)
+        if plan_artifact is not None:
+            contract = [item.model_dump(mode="json") for item in plan_artifact.envelope.body.deliverables]
+
+        return {
+            "signals": {
+                "deliverable_coverage": _cover_deliverables(contract, outputs),
+                "self_check_summary": self_check_summary,
+                "outputs_text": [item["content"] for item in outputs],
+            }
+        }
+
+
+class GovernanceSnapshotSignalsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.GOVERNANCE_SNAPSHOT)
+        if artifact is None:
+            return {}
+        body = artifact.envelope.body
+        return {
+            "signals": {
+                "commit_gate": {
+                    "status": body.commit_gate_status.status,
+                    "blocking_reasons": list(body.commit_gate_status.blocking_reasons),
+                    "source_artifact_type": body.source_artifact_type,
+                }
+            }
+        }
+
+
+def _keyword_tokens(text: str) -> set[str]:
+    return {token for token in re.split(r"[\s,;:，。；、]+", text) if token}
+
+
+class FidelitySignalsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        summaries = " ".join(event.envelope.summary for event in task_events)
+        summary_tokens = _keyword_tokens(summaries)
+        policy_artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.POLICY_DECISION)
+        hard_constraints = list(policy_artifact.envelope.body.hard_constraints) if policy_artifact else []
+
+        missing_constraints: list[str] = []
+        for item in hard_constraints:
+            tokens = _keyword_tokens(item)
+            if not tokens:
+                continue
+            if not tokens.intersection(summary_tokens):
+                missing_constraints.append(item)
+
+        preserved = not missing_constraints
+        overall = "pass" if preserved else "warning"
+        return {
+            "signals": {
+                "fidelity": {
+                    "hard_constraints_preserved": preserved,
+                    "uncertainty_preserved": True,
+                    "counterevidence_preserved": True,
+                    "missing_constraints": missing_constraints,
+                    "uncertainty_dropped": [],
+                    "missing_counterevidence": [],
+                    "overall": overall,
+                }
+            }
+        }
+
+
 DEFAULT_EXTRACTOR_PIPELINE: list[Extractor] = [
     TaskMetaExtractor(),
     ScoresExtractor(),
     PolicyExtractor(),
     BudgetExtractor(),
     EffectiveArtifactExtractor(),
+    PlanSignalsExtractor(),
+    ResultSignalsExtractor(),
+    GovernanceSnapshotSignalsExtractor(),
+    FidelitySignalsExtractor(),
 ]
 
 

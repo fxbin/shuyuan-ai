@@ -27,7 +27,9 @@ def test_build_yushi_context_extracts_core_governance_signals() -> None:
     assert context["budget"]["token_used"] == 100
     assert context["effective_version"]["plan"] == "v1"
     assert context["artifacts"]["plan"]["envelope"]["body"]["goal"] == "ship v2 kernel"
-    assert context["signals"] == {}
+    assert context["signals"]["acceptance_items"] == ["tests pass"]
+    assert context["signals"]["deliverable_contract"][0]["name"] == "kernel"
+    assert context["signals"]["fidelity"]["overall"] == "pass"
 
 
 def test_build_yushi_context_prefers_effective_artifact_version() -> None:
