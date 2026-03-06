@@ -19,6 +19,9 @@ def build_archive_record(task: TaskRecord, context: YushiContext, task_events: l
     total_token_used = sum(event.envelope.budget.token_used for event in task_events)
     total_tool_used = sum(event.envelope.budget.tool_used for event in task_events)
     effective_artifacts = sorted(context.artifacts.keys())
+    value_score = context.scores.value or 0
+    cost_units = max(total_token_used + (total_tool_used * 50), 1)
+    value_density = round(value_score / cost_units, 4)
     review_verdicts = [
         event.envelope.body.verdict
         for event in task_events
@@ -38,6 +41,8 @@ def build_archive_record(task: TaskRecord, context: YushiContext, task_events: l
             "event_count": len(task_events),
             "final_commit_gate": challenge.get("overall", {}).get("commit_gate"),
             "audit_verdict": audit.get("verdict"),
+            "score_snapshot": context.scores.model_dump(mode="json"),
+            "value_density": value_density,
         },
         retrospective={
             "routing_assessment": {
@@ -53,6 +58,7 @@ def build_archive_record(task: TaskRecord, context: YushiContext, task_events: l
                 "total_tool_used": total_tool_used,
                 "budget_token_cap": context.budget.token_cap,
                 "budget_tool_cap": context.budget.tool_cap,
+                "value_density": value_density,
             },
             "quality_ledger": {
                 "review_verdicts": review_verdicts,

@@ -25,6 +25,7 @@ def test_archive_task_persists_knowledge_projection(tmp_path) -> None:
     assert record["summary"]["audit_verdict"] == "pass"
     assert "challenge_report" in record["summary"]["effective_artifacts"]
     assert record["retrospective"]["quality_ledger"]["challenge_test_count"] > 0
+    assert record["summary"]["value_density"] > 0
 
 
 def test_archive_record_endpoint_returns_projection(tmp_path) -> None:
@@ -58,3 +59,29 @@ def test_archive_task_writes_bundle_to_object_store(tmp_path) -> None:
 
     assert payload["task_id"] == task_id
     assert payload["summary"]["audit_verdict"] == "pass"
+
+
+def test_evolve_advice_and_dashboard_are_available(tmp_path) -> None:
+    service = GovernanceService(object_store=LocalObjectStore(root=tmp_path, bucket="artifacts"))
+    task_id = _prepare_pre_commit_task(service, vague_acceptance=True)
+    service.run_challenge(task_id)
+    service.run_audit(task_id)
+    service.archive_task(task_id)
+    client = TestClient(create_app(service=service))
+
+    advice_response = client.get(f"/api/v2/tasks/{task_id}/evolve/advice")
+    archives_response = client.get("/api/v2/archives")
+    dashboard_response = client.get("/api/v2/dashboard")
+
+    assert advice_response.status_code == 200
+    advice = advice_response.json()
+    assert advice["task_id"] == task_id
+    assert advice["recommendations"]
+
+    assert archives_response.status_code == 200
+    assert archives_response.json()[0]["task_id"] == task_id
+
+    assert dashboard_response.status_code == 200
+    dashboard = dashboard_response.json()
+    assert dashboard["archive_count"] >= 1
+    assert dashboard["avg_value_density"] > 0

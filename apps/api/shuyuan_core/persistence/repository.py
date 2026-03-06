@@ -216,6 +216,11 @@ class SQLAlchemyGovernanceStore:
             model = session.get(KnowledgeArchiveModel, task_id)
             return self._to_archive_record(model) if model else None
 
+    def list_archive_records(self, limit: int = 50) -> list[ArchiveRecord]:
+        with self.session_factory() as session:
+            stmt = select(KnowledgeArchiveModel).order_by(KnowledgeArchiveModel.archived_at.desc()).limit(limit)
+            return [self._to_archive_record(model) for model in session.scalars(stmt).all()]
+
     def _sync_effective_artifact(self, session: Session, envelope: StrictEnvelope) -> None:
         artifact_id = envelope.header.artifact_id or envelope.header.event_id
         version = envelope.header.version or 1

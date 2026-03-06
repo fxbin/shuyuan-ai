@@ -41,6 +41,14 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
         except Exception as exc:
             raise HTTPException(status_code=404, detail=f"schema not found: {schema_name}") from exc
 
+    @router.get("/dashboard")
+    async def get_dashboard(limit: int = 50) -> dict[str, Any]:
+        return svc.get_dashboard(limit=limit)
+
+    @router.get("/archives")
+    async def list_archives(limit: int = 50) -> list[dict[str, Any]]:
+        return svc.list_archive_records(limit=limit)
+
     @router.get("/tasks/{task_id}")
     async def get_task(task_id: str) -> dict[str, Any]:
         try:
@@ -114,6 +122,13 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
     async def get_archive_record(task_id: str) -> dict[str, Any] | None:
         try:
             return svc.get_archive_record(task_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @router.get("/tasks/{task_id}/evolve/advice")
+    async def get_evolve_advice(task_id: str) -> dict[str, Any] | None:
+        try:
+            return svc.get_evolve_advice(task_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 

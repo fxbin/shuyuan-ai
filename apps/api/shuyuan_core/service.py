@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from .archive import build_archive_record
 from .challenge_runner import ChallengeRuntime
 from .config import Settings, get_settings
+from .evolve import build_evolve_advice, build_vd_dashboard
 from .audit_runner import build_audit_envelope
 from .challenge_runner import build_challenge_envelope
 from .coordination import CoordinationError, Lease, RunCoordinator, create_run_coordinator
@@ -123,6 +124,20 @@ class GovernanceService:
         self.store.get_task(task_id)
         record = self.store.get_archive_record(task_id)
         return record.model_dump(mode="json") if record else None
+
+    def list_archive_records(self, limit: int = 50) -> list[dict[str, Any]]:
+        return [record.model_dump(mode="json") for record in self.store.list_archive_records(limit=limit)]
+
+    def get_evolve_advice(self, task_id: str) -> dict[str, Any] | None:
+        self.store.get_task(task_id)
+        record = self.store.get_archive_record(task_id)
+        if record is None:
+            return None
+        return build_evolve_advice(record)
+
+    def get_dashboard(self, limit: int = 50) -> dict[str, Any]:
+        records = self.store.list_archive_records(limit=limit)
+        return build_vd_dashboard(records)
 
     def generate_challenge_envelope(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)

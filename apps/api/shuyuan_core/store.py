@@ -92,6 +92,8 @@ class GovernanceStore(Protocol):
 
     def get_archive_record(self, task_id: str) -> ArchiveRecord | None: ...
 
+    def list_archive_records(self, limit: int = 50) -> list[ArchiveRecord]: ...
+
 
 class InMemoryGovernanceStore:
     def __init__(self) -> None:
@@ -204,6 +206,10 @@ class InMemoryGovernanceStore:
 
     def get_archive_record(self, task_id: str) -> ArchiveRecord | None:
         return self.archive_records.get(task_id)
+
+    def list_archive_records(self, limit: int = 50) -> list[ArchiveRecord]:
+        records = sorted(self.archive_records.values(), key=lambda item: item.archived_at, reverse=True)
+        return records[:limit]
 
 
 ACTIVE_EFFECTIVE_STATUSES = {
