@@ -78,6 +78,15 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
         except (GovernanceError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @router.post("/tasks/{task_id}/audit/run")
+    async def run_audit(task_id: str) -> dict[str, Any]:
+        try:
+            return svc.run_audit(task_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except (GovernanceError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @router.post("/envelopes")
     async def submit_envelope(payload: dict[str, Any]) -> dict[str, Any]:
         try:
