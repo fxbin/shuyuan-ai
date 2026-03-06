@@ -62,6 +62,13 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    @router.get("/tasks/{task_id}/extractors/yushi-context")
+    async def get_yushi_context(task_id: str) -> dict[str, Any]:
+        try:
+            return svc.build_yushi_context(task_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
     @router.post("/envelopes")
     async def submit_envelope(payload: dict[str, Any]) -> dict[str, Any]:
         try:

@@ -35,3 +35,14 @@ def test_registry_reads_generated_schema_pack() -> None:
     artifact_name = artifact_schema_names()[0]
     artifact_schema = get_named_schema(artifact_name)
     assert artifact_schema["$id"].endswith(f"/artifacts/{artifact_name}.json")
+
+
+def test_yushi_context_endpoint_is_exposed() -> None:
+    client = TestClient(create_app())
+    task = client.post("/api/v2/tasks", json={"user_intent": "extract context"}).json()
+
+    response = client.get(f"/api/v2/tasks/{task['task_id']}/extractors/yushi-context")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["task_id"] == task["task_id"]
+    assert payload["trace_id"] == task["trace_id"]

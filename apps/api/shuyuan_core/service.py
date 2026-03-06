@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from .enums import ArtifactType, EffectiveStatus, TaskMode, TaskState
 from .envelope import StrictEnvelope
+from .extractors import build_yushi_context
 from .models import (
     ChallengeReportBody,
     ExternalCommitReceiptBody,
@@ -66,6 +67,11 @@ class GovernanceService:
         normalized = artifact_type if isinstance(artifact_type, ArtifactType) else ArtifactType(artifact_type)
         artifact = self.store.resolve_effective_artifact(task_id, normalized)
         return artifact.envelope.model_dump(mode="json", by_alias=True) if artifact else None
+
+    def build_yushi_context(self, task_id: str) -> dict[str, Any]:
+        task = self.store.get_task(task_id)
+        context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
+        return context.model_dump(mode="json")
 
     def archive_task(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
