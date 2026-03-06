@@ -19,6 +19,7 @@ from ..models import (
 from ..store import (
     ACTIVE_EFFECTIVE_PRIORITY,
     ACTIVE_EFFECTIVE_STATUSES,
+    ArchiveRecord,
     ArtifactVersionRecord,
     EventRecord,
     SubmissionResult,
@@ -32,6 +33,7 @@ from .models import (
     EffectiveViewModel,
     EventModel,
     ExternalActionReceiptModel,
+    KnowledgeArchiveModel,
     PolicyDecisionModel,
     TaskModel,
 )
@@ -191,6 +193,28 @@ class SQLAlchemyGovernanceStore:
     def latest_body(self, task_id: str, artifact_type: ArtifactType) -> Any | None:
         artifact = self.resolve_effective_artifact(task_id, artifact_type)
         return artifact.envelope.body if artifact else None
+
+    def upsert_archive_record(self, record: ArchiveRecord) -> ArchiveRecord:
+        with self.session_factory.begin() as session:
+            model = session.get(KnowledgeArchiveModel, record.task_id)
+            if model is None:
+                model = KnowledgeArchiveModel(
+                    task_id=record.task_id,
+                    trace_id=record.trace_id,
+                )
+            model.archived_at = record.archived_at
+            model.summary_json = record.summary
+            model.retrospective_json = record.retrospective
+            model.knowledge_signals_json = record.knowledge_signals
+            model.source_event_ids_json = record.source_event_ids
+            model.bundle_ref = record.bundle_ref
+            session.add(model)
+        return record
+
+    def get_archive_record(self, task_id: str) -> ArchiveRecord | None:
+        with self.session_factory() as session:
+            model = session.get(KnowledgeArchiveModel, task_id)
+            return self._to_archive_record(model) if model else None
 
     def _sync_effective_artifact(self, session: Session, envelope: StrictEnvelope) -> None:
         artifact_id = envelope.header.artifact_id or envelope.header.event_id
@@ -389,4 +413,16 @@ class SQLAlchemyGovernanceStore:
         return EventRecord(
             envelope=StrictEnvelope.parse_payload(model.envelope_json),
             stored_at=model.timestamp,
+        )
+
+    def _to_archive_record(self, model: KnowledgeArchiveModel) -> ArchiveRecord:
+        return ArchiveRecord(
+            task_id=model.task_id,
+            trace_id=model.trace_id,
+            archived_at=model.archived_at,
+            summary=model.summary_json,
+            retrospective=model.retrospective_json,
+            knowledge_signals=model.knowledge_signals_json,
+            source_event_ids=model.source_event_ids_json,
+            bundle_ref=model.bundle_ref,
         )

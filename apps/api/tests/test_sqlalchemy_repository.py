@@ -173,6 +173,9 @@ def test_sqlalchemy_store_supports_full_happy_path(tmp_path) -> None:
     archived = service.archive_task(task_id)
     assert archived["current_state"] == "archived"
     assert len(service.list_events(task_id)) == 10
+    archive_record = service.get_archive_record(task_id)
+    assert archive_record is not None
+    assert archive_record["summary"]["audit_verdict"] == "pass"
 
 
 def test_sqlalchemy_store_updates_effective_view_on_new_plan_version(tmp_path) -> None:

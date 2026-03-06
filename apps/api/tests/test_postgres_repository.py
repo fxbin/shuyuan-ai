@@ -218,6 +218,9 @@ def test_postgres_store_supports_full_happy_path(postgres_service: GovernanceSer
     archived = postgres_service.archive_task(task_id)
     assert archived["current_state"] == "archived"
     assert len(postgres_service.list_events(task_id)) == 10
+    archive_record = postgres_service.get_archive_record(task_id)
+    assert archive_record is not None
+    assert archive_record["summary"]["audit_verdict"] == "pass"
 
 
 @pytest.mark.postgres_integration

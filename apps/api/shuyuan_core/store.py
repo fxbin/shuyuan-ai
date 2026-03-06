@@ -52,6 +52,19 @@ class SubmissionResult(BaseModel):
     effective_status: EffectiveStatus
 
 
+class ArchiveRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: str
+    trace_id: str
+    archived_at: datetime
+    summary: dict[str, Any]
+    retrospective: dict[str, Any]
+    knowledge_signals: dict[str, Any]
+    source_event_ids: list[str]
+    bundle_ref: str | None = None
+
+
 class GovernanceStore(Protocol):
     def ensure_schema(self) -> None: ...
 
@@ -75,6 +88,10 @@ class GovernanceStore(Protocol):
 
     def latest_body(self, task_id: str, artifact_type: ArtifactType) -> Any | None: ...
 
+    def upsert_archive_record(self, record: ArchiveRecord) -> ArchiveRecord: ...
+
+    def get_archive_record(self, task_id: str) -> ArchiveRecord | None: ...
+
 
 class InMemoryGovernanceStore:
     def __init__(self) -> None:
@@ -82,6 +99,7 @@ class InMemoryGovernanceStore:
         self.events_by_task: dict[str, list[EventRecord]] = {}
         self.artifact_versions: dict[str, list[ArtifactVersionRecord]] = {}
         self.event_index: dict[str, EventRecord] = {}
+        self.archive_records: dict[str, ArchiveRecord] = {}
 
     def ensure_schema(self) -> None:
         return None
@@ -179,6 +197,13 @@ class InMemoryGovernanceStore:
     def latest_body(self, task_id: str, artifact_type: ArtifactType) -> Any | None:
         artifact = self.resolve_effective_artifact(task_id, artifact_type)
         return artifact.envelope.body if artifact else None
+
+    def upsert_archive_record(self, record: ArchiveRecord) -> ArchiveRecord:
+        self.archive_records[record.task_id] = record
+        return record
+
+    def get_archive_record(self, task_id: str) -> ArchiveRecord | None:
+        return self.archive_records.get(task_id)
 
 
 ACTIVE_EFFECTIVE_STATUSES = {

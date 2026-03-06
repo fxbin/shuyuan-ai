@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
+from .archive import build_archive_record
 from .config import Settings, get_settings
 from .audit_runner import build_audit_envelope
 from .challenge_runner import build_challenge_envelope
@@ -25,6 +26,7 @@ from .models import (
     WorkOrderBody,
 )
 from .store import GovernanceStore, SubmissionResult, create_governance_store
+from .store import ArchiveRecord
 
 
 class GovernanceError(ValueError):
@@ -114,6 +116,11 @@ class GovernanceService:
             "status": "idle",
         }
 
+    def get_archive_record(self, task_id: str) -> dict[str, Any] | None:
+        self.store.get_task(task_id)
+        record = self.store.get_archive_record(task_id)
+        return record.model_dump(mode="json") if record else None
+
     def generate_challenge_envelope(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
         context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
@@ -145,6 +152,11 @@ class GovernanceService:
         if task.current_state != TaskState.AUDITED:
             raise GovernanceError("task must be audited before archive")
         self._validate_archive_readiness(task_id)
+        task_events = self.store.list_events(task_id)
+        context = build_yushi_context(task=task, task_events=task_events, store=self.store)
+        archive_record = build_archive_record(task=task, context=context, task_events=task_events)
+        archive_record = self._attach_archive_bundle(archive_record)
+        self.store.upsert_archive_record(archive_record)
         archived = self.store.update_task_state(task_id, TaskState.ARCHIVED)
         return archived.model_dump(mode="json")
 
@@ -457,6 +469,13 @@ class GovernanceService:
 
     def _receipt_idempotency_key(self, task_id: str, request_idempotency_key: str) -> str:
         return f"receipt-idempotency:{task_id}:{request_idempotency_key}"
+
+    def _attach_archive_bundle(self, record: ArchiveRecord) -> ArchiveRecord:
+        stored = self.object_store.put_json(
+            f"tasks/{record.task_id}/archive/knowledge_archive.json",
+            record.model_dump(mode="json"),
+        )
+        return record.model_copy(update={"bundle_ref": stored.uri})
 
     def _validate_archive_readiness(self, task_id: str) -> None:
         events = self.store.list_events(task_id)

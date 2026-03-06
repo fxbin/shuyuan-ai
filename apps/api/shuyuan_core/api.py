@@ -110,5 +110,12 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
         except GovernanceError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @router.get("/tasks/{task_id}/archive-record")
+    async def get_archive_record(task_id: str) -> dict[str, Any] | None:
+        try:
+            return svc.get_archive_record(task_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
     app.include_router(router)
     return app
