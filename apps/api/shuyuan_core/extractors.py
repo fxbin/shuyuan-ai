@@ -135,14 +135,14 @@ class PolicyExtractor:
             return {}
         body = artifact.envelope.body
         latest = task_events[-1].envelope if task_events else None
-        data_sensitivity = None
-        compliance_domain: list[str] = []
+        data_sensitivity = body.ext.get("data_sensitivity")
+        compliance_domain: list[str] = list(body.ext.get("compliance_domain", []) or [])
         if latest is not None:
             policy_snapshot = latest.governance_carryover.model_dump(mode="json")
             binding = policy_snapshot.get("approval_binding")
             if isinstance(binding, dict):
-                data_sensitivity = binding.get("data_sensitivity")
-                compliance_domain = binding.get("compliance_domain", []) or []
+                data_sensitivity = binding.get("data_sensitivity", data_sensitivity)
+                compliance_domain = binding.get("compliance_domain", compliance_domain) or []
         return {
             "policy": {
                 "verdict": body.policy_verdict,

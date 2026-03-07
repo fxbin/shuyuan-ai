@@ -17,6 +17,7 @@ from .enums import ArtifactType, EffectiveStatus, TaskMode, TaskState
 from .envelope import StrictEnvelope
 from .extractors import build_yushi_context
 from .object_store import ObjectStore, create_object_store
+from .roundtable_runner import build_roundtable_bundle
 from .models import (
     ChallengeReportBody,
     ExternalCommitReceiptBody,
@@ -171,6 +172,11 @@ class GovernanceService:
         context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
         return build_audit_envelope(context)
 
+    def generate_roundtable_bundle(self, task_id: str) -> list[dict[str, Any]]:
+        task = self.store.get_task(task_id)
+        context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
+        return build_roundtable_bundle(context)
+
     def run_audit(self, task_id: str) -> dict[str, Any]:
         return self._run_governed_operation(
             task_id=task_id,
@@ -178,6 +184,62 @@ class GovernanceService:
             artifact_type=ArtifactType.AUDIT_REPORT,
             builder=self.generate_audit_envelope,
         )
+
+    def run_roundtable(self, task_id: str) -> dict[str, Any]:
+        self.store.get_task(task_id)
+        state_key = self._operation_state_key(task_id, "roundtable")
+        submissions: list[dict[str, Any]] = []
+        try:
+            with self.coordinator.hold(f"roundtable:{task_id}", ttl_s=self.settings.run_lock_ttl_s):
+                self.coordinator.write_state(
+                    state_key,
+                    {
+                        "task_id": task_id,
+                        "operation": "roundtable",
+                        "status": "running",
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    ttl_s=self.settings.short_state_ttl_s,
+                )
+                for envelope in self.generate_roundtable_bundle(task_id):
+                    submission = self.submit_envelope(envelope)
+                    submissions.append(submission.model_dump(mode="json"))
+                final_report = self.get_effective_artifact(task_id, ArtifactType.FINAL_REPORT)
+                self.coordinator.write_state(
+                    state_key,
+                    {
+                        "task_id": task_id,
+                        "operation": "roundtable",
+                        "status": "completed",
+                        "event_id": submissions[-1]["event_id"],
+                        "artifact_type": ArtifactType.FINAL_REPORT.value,
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    ttl_s=self.settings.short_state_ttl_s,
+                )
+                return {
+                    "submissions": submissions,
+                    "envelopes": {
+                        "agenda": self.get_effective_artifact(task_id, ArtifactType.AGENDA),
+                        "round_summary": self.get_effective_artifact(task_id, ArtifactType.ROUND_SUMMARY),
+                        "final_report": final_report,
+                    },
+                }
+        except GovernanceError as exc:
+            self.coordinator.write_state(
+                state_key,
+                {
+                    "task_id": task_id,
+                    "operation": "roundtable",
+                    "status": "failed",
+                    "error": str(exc),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+                ttl_s=self.settings.short_state_ttl_s,
+            )
+            raise
+        except CoordinationError as exc:
+            raise GovernanceError(str(exc)) from exc
 
     def archive_task(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
@@ -331,13 +393,29 @@ class GovernanceService:
                 return TaskState.BUDGETED
             return TaskState.DISPATCH_READY
 
-        if artifact_type in {ArtifactType.AGENDA, ArtifactType.ROUND_SUMMARY, ArtifactType.FINAL_REPORT}:
+        if artifact_type in {ArtifactType.AGENDA, ArtifactType.ROUND_SUMMARY}:
             self._assert_state(
                 current_state,
                 {TaskState.BUDGETED, TaskState.PLANNED, TaskState.UNDER_REVIEW},
                 artifact_type,
             )
             return TaskState.UNDER_REVIEW
+
+        if artifact_type == ArtifactType.FINAL_REPORT:
+            self._assert_state(
+                current_state,
+                {TaskState.BUDGETED, TaskState.PLANNED, TaskState.UNDER_REVIEW},
+                artifact_type,
+            )
+            unresolved_blocking = [item for item in body.blocking_minority if item.status == "unresolved"]
+            if (
+                body.requires_user_approval
+                or unresolved_blocking
+                or body.decision_rule_used == "guardian_veto"
+                or body.decision_type == "unresolved_escalation"
+            ):
+                return TaskState.UNDER_REVIEW
+            return TaskState.DISPATCH_READY
 
         if artifact_type == ArtifactType.WORK_ORDER:
             self._assert_state(current_state, {TaskState.DISPATCH_READY}, artifact_type)
