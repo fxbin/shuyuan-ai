@@ -156,3 +156,128 @@ def test_service_accepts_runtime_artifacts_without_breaking_main_flow() -> None:
 
     assert preview_result.state == "pre_execute_check"
     assert snapshot_result.state == "pre_execute_check"
+
+
+def test_runtime_extractors_emit_runtime_signals() -> None:
+    service = GovernanceService()
+    task_id, trace_id, plan_artifact_id = submit_happy_path_setup(service)
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-5",
+            "review",
+            "review_report",
+            {
+                "verdict": "approve",
+                "issues": [],
+                "conditions": [],
+                "lane_suggestion": {"suggested_level": "L2", "reason": "ok"},
+                "approval_binding": {
+                    "artifact_id": plan_artifact_id,
+                    "version": 1,
+                    "approval_digest": "sha256:plan-v1",
+                    "approved_by": "menxia",
+                    "approved_at": datetime.now(timezone.utc).isoformat(),
+                    "approval_scope": "plan_and_dispatch",
+                },
+            },
+        )
+    )
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-6",
+            "dispatch",
+            "work_order",
+            {
+                "work_items": [
+                    {
+                        "id": "W1",
+                        "owner": "工部",
+                        "input_refs": [{"event_id": "EV-4", "artifact_type": "plan", "note": "effective"}],
+                        "instructions": "inspect page then execute",
+                        "acceptance": ["tests pass"],
+                        "budget_slice": {"token_cap": 500, "time_cap_s": 30, "tool_cap": 2},
+                        "side_effect_level": "read_only",
+                        "commit_targets": [],
+                        "rollback_plan": "revert",
+                    }
+                ],
+                "schedule": {"priority": "P1", "deadline": None},
+            },
+        )
+    )
+
+    def submit_runtime(event_id: str, stage: str, artifact_type: str, runtime_phase: str, body: dict[str, object]) -> None:
+        payload = make_envelope(task_id, trace_id, event_id, stage, artifact_type, body)
+        payload["header"]["runtime_phase"] = runtime_phase
+        service.submit_envelope(payload)
+
+    submit_runtime(
+        "EV-R1",
+        "execute",
+        "world_state_snapshot",
+        "observe",
+        make_runtime_body(
+            "observe",
+            observed_at=datetime.now(timezone.utc).isoformat(),
+            state_digest="sha256:state-1",
+            observation_summary="landing page",
+            sanitized=False,
+            visible_targets=["submit"],
+        ),
+    )
+    submit_runtime(
+        "EV-R2",
+        "execute",
+        "observation_assessment",
+        "sanitize",
+        make_runtime_body(
+            "sanitize",
+            assessed_at=datetime.now(timezone.utc).isoformat(),
+            taint_detected=True,
+            taint_reasons=["prompt_injection_banner"],
+            trusted_observation_minimum=False,
+            state_drift_risk="high",
+            affordance_integrity="spoofed",
+            recommendation="reobserve",
+        ),
+    )
+    submit_runtime(
+        "EV-R3",
+        "execute",
+        "session_checkpoint",
+        "checkpoint",
+        make_runtime_body(
+            "checkpoint",
+            checkpoint_id="CK-1",
+            captured_at=datetime.now(timezone.utc).isoformat(),
+            checkpoint_summary="paused before click",
+            bound_snapshot_id="SN-1",
+            restorable=True,
+        ),
+    )
+    submit_runtime(
+        "EV-R4",
+        "execute",
+        "resume_packet",
+        "resume",
+        make_runtime_body(
+            "resume",
+            resume_from_checkpoint_id="CK-1",
+            resumed_at=datetime.now(timezone.utc).isoformat(),
+            resume_reason="continue after review",
+            stale_risk="med",
+            resume_strategy="reobserve",
+        ),
+    )
+
+    context = service.build_yushi_context(task_id)
+
+    assert context["signals"]["observation"]["taint_detected"] is True
+    assert context["signals"]["state_drift"]["risk"] == "high"
+    assert context["signals"]["affordance_integrity"]["status"] == "spoofed"
+    assert context["signals"]["checkpoint"]["complete"] is True
+    assert context["signals"]["resume"]["checkpoint_present"] is True

@@ -209,6 +209,25 @@ class EffectiveArtifactExtractor:
         }
 
 
+class ObservationTaintExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.OBSERVATION_ASSESSMENT)
+        if artifact is None:
+            return {}
+        body = artifact.envelope.body
+        return {
+            "signals": {
+                "observation": {
+                    "taint_detected": body.taint_detected,
+                    "taint_reasons": list(body.taint_reasons),
+                    "trusted_observation_minimum": body.trusted_observation_minimum,
+                    "trust_level": body.trust_level,
+                    "recommendation": body.recommendation,
+                }
+            }
+        }
+
+
 class LineageExtractor:
     def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
         lineage: list[dict[str, Any]] = []
@@ -536,6 +555,87 @@ class DriftSignalsExtractor:
         }
 
 
+class StateDriftExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        assessment = store.resolve_effective_artifact(task.task_id, ArtifactType.OBSERVATION_ASSESSMENT)
+        snapshot = store.resolve_effective_artifact(task.task_id, ArtifactType.WORLD_STATE_SNAPSHOT)
+        resume = store.resolve_effective_artifact(task.task_id, ArtifactType.RESUME_PACKET)
+        if assessment is None and snapshot is None and resume is None:
+            return {}
+        risk = assessment.envelope.body.state_drift_risk if assessment is not None else "unknown"
+        snapshot_id = snapshot.envelope.body.snapshot_id if snapshot is not None else None
+        resume_snapshot_id = resume.envelope.body.snapshot_id if resume is not None else None
+        return {
+            "signals": {
+                "state_drift": {
+                    "risk": risk,
+                    "snapshot_id": snapshot_id,
+                    "resume_snapshot_id": resume_snapshot_id,
+                    "snapshot_changed_since_resume": bool(
+                        snapshot_id and resume_snapshot_id and snapshot_id != resume_snapshot_id
+                    ),
+                }
+            }
+        }
+
+
+class AffordanceIntegrityExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        assessment = store.resolve_effective_artifact(task.task_id, ArtifactType.OBSERVATION_ASSESSMENT)
+        snapshot = store.resolve_effective_artifact(task.task_id, ArtifactType.WORLD_STATE_SNAPSHOT)
+        if assessment is None and snapshot is None:
+            return {}
+        integrity = assessment.envelope.body.affordance_integrity if assessment is not None else "unknown"
+        affordances = list(snapshot.envelope.body.affordances) if snapshot is not None else []
+        return {
+            "signals": {
+                "affordance_integrity": {
+                    "status": integrity,
+                    "affordances": affordances,
+                    "visible_target_count": len(getattr(snapshot.envelope.body, "visible_targets", [])) if snapshot else 0,
+                }
+            }
+        }
+
+
+class CheckpointCompletenessExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.SESSION_CHECKPOINT)
+        if artifact is None:
+            return {}
+        body = artifact.envelope.body
+        complete = bool(body.restorable and body.bound_snapshot_id and body.checkpoint_summary)
+        return {
+            "signals": {
+                "checkpoint": {
+                    "checkpoint_id": body.checkpoint_id,
+                    "restorable": body.restorable,
+                    "bound_snapshot_id": body.bound_snapshot_id,
+                    "complete": complete,
+                }
+            }
+        }
+
+
+class ResumeRiskExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.RESUME_PACKET)
+        if artifact is None:
+            return {}
+        body = artifact.envelope.body
+        checkpoint = store.resolve_effective_artifact(task.task_id, ArtifactType.SESSION_CHECKPOINT)
+        return {
+            "signals": {
+                "resume": {
+                    "resume_from_checkpoint_id": body.resume_from_checkpoint_id,
+                    "stale_risk": body.stale_risk,
+                    "resume_strategy": body.resume_strategy,
+                    "checkpoint_present": checkpoint is not None,
+                }
+            }
+        }
+
+
 class FidelitySignalsExtractor:
     def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
         summaries = " ".join(event.envelope.summary for event in task_events)
@@ -756,6 +856,11 @@ DEFAULT_EXTRACTOR_PIPELINE: list[Extractor] = [
     PolicyExtractor(),
     BudgetExtractor(),
     EffectiveArtifactExtractor(),
+    ObservationTaintExtractor(),
+    StateDriftExtractor(),
+    AffordanceIntegrityExtractor(),
+    CheckpointCompletenessExtractor(),
+    ResumeRiskExtractor(),
     LineageExtractor(),
     ApprovalBindingExtractor(),
     PlanSignalsExtractor(),
