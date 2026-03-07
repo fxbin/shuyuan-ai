@@ -118,6 +118,10 @@ a {
   color: rgba(31, 42, 44, 0.66);
 }
 
+.mono {
+  font-family: "SF Mono", "IBM Plex Mono", monospace;
+}
+
 .section {
   margin-top: 22px;
 }
@@ -151,6 +155,25 @@ a {
 .card-list {
   display: grid;
   gap: 14px;
+}
+
+.stack {
+  display: grid;
+  gap: 14px;
+}
+
+.review-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.span-5 {
+  grid-column: span 5;
+}
+
+.span-7 {
+  grid-column: span 7;
 }
 
 .archive-card {
@@ -198,12 +221,162 @@ a {
   border: 1px solid rgba(123, 139, 83, 0.14);
 }
 
+.task-list {
+  display: grid;
+  gap: 10px;
+}
+
+.task-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(31, 42, 44, 0.1);
+  background: rgba(255, 252, 248, 0.68);
+}
+
+.task-row.active {
+  border-color: rgba(157, 60, 47, 0.26);
+  background: rgba(157, 60, 47, 0.08);
+}
+
+.task-meta {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.section-head,
+.artifact-head,
+.timeline-head,
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.mini-grid,
+.kv-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.kv-grid label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(31, 42, 44, 0.48);
+}
+
+.status-list,
+.signal-list,
+.artifact-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.signal-item,
+.artifact-card {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 251, 244, 0.72);
+  border: 1px solid rgba(31, 42, 44, 0.08);
+}
+
+.signal-item pre,
+.artifact-card pre {
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 14px;
+  overflow: auto;
+  background: rgba(31, 42, 44, 0.06);
+  font-size: 12px;
+  line-height: 1.45;
+  font-family: "SF Mono", "IBM Plex Mono", monospace;
+}
+
+.artifact-summary {
+  margin-top: 8px;
+  color: rgba(31, 42, 44, 0.72);
+  line-height: 1.5;
+}
+
+.timeline {
+  display: grid;
+  gap: 14px;
+}
+
+.timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  box-shadow: 0 0 0 6px rgba(157, 60, 47, 0.08);
+  margin-top: 8px;
+}
+
+.timeline-body {
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(31, 42, 44, 0.08);
+  background: rgba(255, 251, 244, 0.8);
+}
+
+.timeline-body p {
+  margin: 10px 0 0;
+  line-height: 1.6;
+}
+
+.compact {
+  padding: 14px;
+}
+
 .priority-high {
   color: var(--accent);
 }
 
 .priority-med {
   color: var(--gold);
+}
+
+.pill.accent {
+  background: rgba(157, 60, 47, 0.1);
+  border-color: rgba(157, 60, 47, 0.18);
+}
+
+.pill.gold {
+  background: rgba(198, 154, 74, 0.12);
+  border-color: rgba(198, 154, 74, 0.2);
+}
+
+.pill.success {
+  background: rgba(123, 139, 83, 0.12);
+  border-color: rgba(123, 139, 83, 0.2);
+}
+
+.pill.danger {
+  background: rgba(157, 60, 47, 0.12);
+  border-color: rgba(157, 60, 47, 0.22);
+}
+
+.pill.neutral {
+  background: rgba(31, 42, 44, 0.06);
+  border-color: rgba(31, 42, 44, 0.12);
 }
 
 .empty {
@@ -217,7 +390,8 @@ a {
   .hero-copy,
   .hero-aside,
   .stats > *,
-  .section-grid > * {
+  .section-grid > *,
+  .review-grid > * {
     grid-column: span 12 !important;
   }
 
@@ -241,5 +415,20 @@ a {
 
   .stats {
     grid-template-columns: 1fr;
+  }
+
+  .mini-grid,
+  .kv-grid,
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-row,
+  .section-head,
+  .artifact-head,
+  .timeline-head,
+  .status-item {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

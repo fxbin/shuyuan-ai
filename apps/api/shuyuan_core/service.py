@@ -105,6 +105,9 @@ class GovernanceService:
     def get_task(self, task_id: str) -> dict[str, Any]:
         return self.store.get_task(task_id).model_dump(mode="json")
 
+    def list_tasks(self, limit: int = 50) -> list[dict[str, Any]]:
+        return [task.model_dump(mode="json") for task in self.store.list_tasks(limit=limit)]
+
     def get_effective_artifact(
         self, task_id: str, artifact_type: ArtifactType | str
     ) -> dict[str, Any] | None:

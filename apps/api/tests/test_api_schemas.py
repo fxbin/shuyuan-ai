@@ -46,3 +46,13 @@ def test_yushi_context_endpoint_is_exposed() -> None:
     payload = response.json()
     assert payload["task_id"] == task["task_id"]
     assert payload["trace_id"] == task["trace_id"]
+
+
+def test_task_list_endpoint_is_exposed() -> None:
+    client = TestClient(create_app())
+    task = client.post("/api/v2/tasks", json={"user_intent": "list task"}).json()
+
+    response = client.get("/api/v2/tasks?limit=5")
+    assert response.status_code == 200
+    payload = response.json()
+    assert any(item["task_id"] == task["task_id"] for item in payload)

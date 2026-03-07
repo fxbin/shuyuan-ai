@@ -79,6 +79,11 @@ class SQLAlchemyGovernanceStore:
                 raise KeyError(f"task not found: {task_id}")
             return self._to_task_record(model)
 
+    def list_tasks(self, limit: int = 50) -> list[TaskRecord]:
+        with self.session_factory() as session:
+            stmt = select(TaskModel).order_by(TaskModel.created_at.desc()).limit(limit)
+            return [self._to_task_record(model) for model in session.scalars(stmt).all()]
+
     def update_task_state(self, task_id: str, state: TaskState) -> TaskRecord:
         with self.session_factory.begin() as session:
             model = session.get(TaskModel, task_id)

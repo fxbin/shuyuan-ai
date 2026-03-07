@@ -34,6 +34,10 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
     async def create_task(request: CreateTaskRequest) -> dict[str, Any]:
         return svc.create_task(user_intent=request.user_intent, trace_id=request.trace_id)
 
+    @router.get("/tasks")
+    async def list_tasks(limit: int = 50) -> list[dict[str, Any]]:
+        return svc.list_tasks(limit=limit)
+
     @router.post("/route/preview")
     async def preview_route(request: RoutePreviewRequest) -> dict[str, Any]:
         try:

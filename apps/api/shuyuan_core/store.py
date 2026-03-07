@@ -72,6 +72,8 @@ class GovernanceStore(Protocol):
 
     def get_task(self, task_id: str) -> TaskRecord: ...
 
+    def list_tasks(self, limit: int = 50) -> list[TaskRecord]: ...
+
     def update_task_state(self, task_id: str, state: TaskState) -> TaskRecord: ...
 
     def persist_submission(self, envelope: StrictEnvelope, next_state: TaskState) -> None: ...
@@ -124,6 +126,10 @@ class InMemoryGovernanceStore:
         if task is None:
             raise KeyError(f"task not found: {task_id}")
         return task
+
+    def list_tasks(self, limit: int = 50) -> list[TaskRecord]:
+        tasks = sorted(self.tasks.values(), key=lambda item: item.created_at, reverse=True)
+        return tasks[:limit]
 
     def update_task_state(self, task_id: str, state: TaskState) -> TaskRecord:
         task = self.get_task(task_id)
