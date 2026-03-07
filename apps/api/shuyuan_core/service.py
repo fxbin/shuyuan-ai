@@ -35,7 +35,7 @@ from .models import (
     WorldStateSnapshotBody,
     WorkOrderBody,
 )
-from .routing import build_route_decision
+from .routing import build_route_decision, build_runtime_route_decision
 from .store import GovernanceStore, SubmissionResult, create_governance_store
 from .store import ArchiveRecord
 
@@ -147,6 +147,15 @@ class GovernanceService:
             return None
         return build_route_decision(artifact.envelope.body).model_dump(mode="json")
 
+    def get_runtime_route_decision(self, task_id: str) -> dict[str, Any] | None:
+        self.store.get_task(task_id)
+        artifact = self.store.resolve_effective_artifact(task_id, ArtifactType.TASK_PROFILE)
+        if artifact is None:
+            return None
+        base_route = build_route_decision(artifact.envelope.body)
+        context = self.build_yushi_context(task_id)
+        return build_runtime_route_decision(context, base_route).model_dump(mode="json")
+
     def build_yushi_context(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
         context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
@@ -173,19 +182,25 @@ class GovernanceService:
     def submit_runtime_artifact(
         self,
         task_id: str,
-        artifact_type: ArtifactType,
-        runtime_phase: RuntimePhase,
+        artifact_type: ArtifactType | str,
+        runtime_phase: RuntimePhase | str,
         body: dict[str, Any],
         *,
         producer_agent: str = "runtime-governor",
         summary: str | None = None,
     ) -> dict[str, Any]:
         task = self.store.get_task(task_id)
+        normalized_artifact_type = (
+            artifact_type if isinstance(artifact_type, ArtifactType) else ArtifactType(artifact_type)
+        )
+        normalized_runtime_phase = (
+            runtime_phase if isinstance(runtime_phase, RuntimePhase) else RuntimePhase(runtime_phase)
+        )
         envelope = self._build_runtime_envelope(
             task_id=task_id,
             trace_id=task.trace_id,
-            artifact_type=artifact_type,
-            runtime_phase=runtime_phase,
+            artifact_type=normalized_artifact_type,
+            runtime_phase=normalized_runtime_phase,
             producer_agent=producer_agent,
             body=body,
             summary=summary,
@@ -200,8 +215,8 @@ class GovernanceService:
                     "trace_id": task.trace_id,
                     "runtime_session_id": runtime_session_id,
                     "status": "updated",
-                    "last_artifact_type": artifact_type.value,
-                    "last_runtime_phase": runtime_phase.value,
+                    "last_artifact_type": normalized_artifact_type.value,
+                    "last_runtime_phase": normalized_runtime_phase.value,
                     "event_id": submission.event_id,
                     "updated_at": datetime.now(timezone.utc).isoformat(),
                 },
@@ -209,7 +224,7 @@ class GovernanceService:
             )
         return {
             "submission": submission.model_dump(mode="json"),
-            "envelope": self.get_effective_artifact(task_id, artifact_type) or envelope,
+            "envelope": self.get_effective_artifact(task_id, normalized_artifact_type) or envelope,
         }
 
     def get_operation_status(self, task_id: str, operation: str) -> dict[str, Any]:

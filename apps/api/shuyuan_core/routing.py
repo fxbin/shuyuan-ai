@@ -33,6 +33,17 @@ class RouteDecision(StrictModel):
     source_scores: dict[str, float]
 
 
+class RuntimeRouteDecision(StrictModel):
+    decision: str
+    lane_choice: Lane
+    complexity_level: ComplexityLevel
+    module_set: list[str]
+    action: str
+    blocking_reasons: list[str]
+    route_reason: str
+    source_signals: dict[str, Any]
+
+
 BUDGETS: dict[ComplexityLevel, BudgetPlan] = {
     ComplexityLevel.L0: BudgetPlan(token_cap=1200, time_cap_s=60, tool_cap=3),
     ComplexityLevel.L1: BudgetPlan(token_cap=3000, time_cap_s=180, tool_cap=6),
@@ -176,5 +187,79 @@ def _decision(
             "complexity": profile.complexity_score,
             "value": profile.value_score,
             "urgency": profile.urgency_score,
+        },
+    )
+
+
+def build_runtime_route_decision(context: dict[str, Any], base_route: RouteDecision) -> RuntimeRouteDecision:
+    observation = context.get("signals", {}).get("observation", {}) or {}
+    state_drift = context.get("signals", {}).get("state_drift", {}) or {}
+    affordance = context.get("signals", {}).get("affordance_integrity", {}) or {}
+    resume = context.get("signals", {}).get("resume", {}) or {}
+
+    blocking_reasons: list[str] = []
+    action = "continue"
+    decision = "allow"
+    lane = base_route.lane_choice
+    level = base_route.complexity_level
+    modules = list(base_route.module_set)
+    reason = "runtime conditions acceptable"
+
+    if observation.get("taint_detected"):
+        decision = "deny"
+        action = "reobserve"
+        blocking_reasons.append("observation_tainted")
+        reason = "tainted observation requires reobserve"
+        lane = Lane.NORM if lane == Lane.FAST else lane
+        if "constraint_check" not in modules:
+            modules.append("constraint_check")
+
+    drift_risk = state_drift.get("risk")
+    if drift_risk in {"high", "critical"} or state_drift.get("snapshot_changed_since_resume"):
+        decision = "escalate"
+        action = "refreeze"
+        blocking_reasons.append("state_drift_high")
+        reason = "state drift requires frozen snapshot refresh"
+        lane = Lane.NORM
+        level = ComplexityLevel.L2 if level in {ComplexityLevel.L0, ComplexityLevel.L1} else level
+        if "drift_detector" not in modules:
+            modules.append("drift_detector")
+
+    if affordance.get("status") in {"spoofed", "degraded"}:
+        decision = "deny" if affordance.get("status") == "spoofed" else "escalate"
+        action = "reobserve" if affordance.get("status") == "spoofed" else "refreeze"
+        blocking_reasons.append(f"affordance_{affordance.get('status')}")
+        reason = "affordance integrity is not trustworthy"
+        lane = Lane.NORM
+        level = ComplexityLevel.L2 if level in {ComplexityLevel.L0, ComplexityLevel.L1} else level
+
+    if resume.get("stale_risk") == "high":
+        decision = "escalate"
+        action = "reobserve"
+        blocking_reasons.append("resume_risk_high")
+        reason = "resume risk requires reobserve"
+        lane = Lane.NORM
+        level = ComplexityLevel.L2 if level in {ComplexityLevel.L0, ComplexityLevel.L1} else level
+
+    if observation.get("trust_level") in {"untrusted", "tainted"} and decision == "allow":
+        decision = "escalate"
+        action = "reobserve"
+        blocking_reasons.append("trust_level_insufficient")
+        reason = "runtime trust is insufficient for continue path"
+        lane = Lane.NORM
+
+    return RuntimeRouteDecision(
+        decision=decision,
+        lane_choice=lane,
+        complexity_level=level,
+        module_set=modules,
+        action=action,
+        blocking_reasons=blocking_reasons,
+        route_reason=reason,
+        source_signals={
+            "observation": observation,
+            "state_drift": state_drift,
+            "affordance_integrity": affordance,
+            "resume": resume,
         },
     )

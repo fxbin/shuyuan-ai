@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi.testclient import TestClient
 
 from apps.api.shuyuan_core.api import create_app
 from apps.api.shuyuan_core.service import GovernanceService
-from apps.api.tests.test_governance_service import make_envelope
+from apps.api.tests.test_governance_service import make_envelope, submit_happy_path_setup
 
 
 def make_task_profile_body(**overrides: object) -> dict[str, object]:
@@ -123,3 +125,126 @@ def test_route_preview_and_task_route_decision_endpoints_are_exposed() -> None:
     assert payload["lane_choice"] == "round"
     assert payload["complexity_level"] == "L3"
     assert "adversarial_roundtable" in payload["module_set"]
+
+
+def test_runtime_route_decision_escalates_on_tainted_runtime_signals() -> None:
+    service = GovernanceService()
+    task_id, trace_id, plan_artifact_id = submit_happy_path_setup(service)
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-R3A",
+            "review",
+            "review_report",
+            {
+                "verdict": "approve",
+                "issues": [],
+                "conditions": [],
+                "lane_suggestion": {"suggested_level": "L2", "reason": "runtime route ready"},
+                "approval_binding": {
+                    "artifact_id": plan_artifact_id,
+                    "version": 1,
+                    "approval_digest": "sha256:plan-v1",
+                    "approved_by": "menxia",
+                    "approved_at": datetime.now(timezone.utc).isoformat(),
+                    "approval_scope": "plan_and_dispatch",
+                },
+            },
+        )
+    )
+    service.submit_envelope(
+        make_envelope(
+            task_id,
+            trace_id,
+            "EV-R3B",
+            "dispatch",
+            "work_order",
+            {
+                "work_items": [
+                    {
+                        "id": "W-ROUTE-1",
+                        "owner": "工部",
+                        "input_refs": [{"event_id": "EV-4", "artifact_type": "plan", "note": "effective"}],
+                        "instructions": "inspect runtime state",
+                        "acceptance": ["route computed"],
+                        "budget_slice": {"token_cap": 300, "time_cap_s": 20, "tool_cap": 1},
+                        "side_effect_level": "read_only",
+                        "commit_targets": [],
+                        "rollback_plan": "noop",
+                    }
+                ],
+                "schedule": {"priority": "P1", "deadline": None},
+            },
+        )
+    )
+    service.submit_runtime_artifact(
+        task_id,
+        "world_state_snapshot",
+        "observe",
+        {
+            "runtime_session_id": "RS-ROUTE-1",
+            "runtime_phase": "observe",
+            "snapshot_id": "SN-ROUTE-1",
+            "observation_hash": "sha256:route",
+            "taint_flags": [],
+            "affordances": ["click"],
+            "source_channel": "web",
+            "trust_level": "trusted",
+            "observed_at": "2026-03-07T00:00:00Z",
+            "state_digest": "sha256:state-route",
+            "observation_summary": "page ready",
+            "sanitized": False,
+            "visible_targets": ["submit"],
+        },
+    )
+    service.submit_runtime_artifact(
+        task_id,
+        "observation_assessment",
+        "sanitize",
+        {
+            "runtime_session_id": "RS-ROUTE-1",
+            "runtime_phase": "sanitize",
+            "snapshot_id": "SN-ROUTE-1",
+            "observation_hash": "sha256:route",
+            "taint_flags": ["prompt_injection"],
+            "affordances": ["click"],
+            "source_channel": "web",
+            "trust_level": "tainted",
+            "assessed_at": "2026-03-07T00:00:00Z",
+            "taint_detected": True,
+            "taint_reasons": ["prompt_injection_banner"],
+            "trusted_observation_minimum": False,
+            "state_drift_risk": "high",
+            "affordance_integrity": "spoofed",
+            "recommendation": "reobserve",
+        },
+    )
+
+    runtime_route = service.get_runtime_route_decision(task_id)
+
+    assert runtime_route["decision"] == "deny"
+    assert runtime_route["action"] == "reobserve"
+    assert "observation_tainted" in runtime_route["blocking_reasons"]
+    assert runtime_route["lane_choice"] == "norm"
+
+
+def test_runtime_route_decision_endpoint_is_exposed() -> None:
+    service = GovernanceService()
+    client = TestClient(create_app(service))
+    task = client.post("/api/v2/tasks", json={"user_intent": "runtime route endpoint"}).json()
+    client.post(
+        "/api/v2/envelopes",
+        json=make_envelope(
+            task["task_id"],
+            task["trace_id"],
+            "EV-R4",
+            "profile",
+            "task_profile",
+            make_task_profile_body(),
+        ),
+    )
+
+    response = client.get(f"/api/v2/tasks/{task['task_id']}/runtime/route-decision")
+    assert response.status_code == 200
+    assert response.json()["decision"] in {"allow", "escalate", "deny"}
