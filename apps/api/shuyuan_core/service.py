@@ -19,14 +19,20 @@ from .extractors import build_yushi_context
 from .object_store import ObjectStore, create_object_store
 from .roundtable_runner import build_roundtable_bundle
 from .models import (
+    ActionIntentBody,
+    ActionPreviewBody,
     ChallengeReportBody,
     ExternalCommitReceiptBody,
     GovernanceSnapshotBody,
+    ObservationAssessmentBody,
     PolicyDecisionBody,
     PublishReceiptBody,
     ResultBody,
     ReviewReportBody,
+    ResumePacketBody,
+    SessionCheckpointBody,
     TaskProfileBody,
+    WorldStateSnapshotBody,
     WorkOrderBody,
 )
 from .routing import build_route_decision
@@ -83,6 +89,7 @@ class GovernanceService:
             envelope = self._attach_route_decision(envelope)
             envelope = self._attach_object_store_refs(envelope)
             envelope = self._hydrate_artifact_identity(envelope)
+            self._validate_runtime_governance(task.current_state, envelope)
             next_state = self._resolve_next_state(task.current_state, envelope)
             self.store.persist_submission(envelope, next_state)
         except Exception:
@@ -569,6 +576,114 @@ class GovernanceService:
             raise GovernanceError("challenge requires review_report")
         if challenge.overall.commit_gate in {"allow", "allow_with_conditions"} and not review.approval_binding.approval_digest:
             raise GovernanceError("approval_binding digest is required before commit authorization")
+
+    def _validate_runtime_governance(self, current_state: TaskState, envelope: StrictEnvelope) -> None:
+        artifact_type = envelope.header.artifact_type
+        if artifact_type == ArtifactType.OBSERVATION_ASSESSMENT:
+            self._validate_observation_assessment(envelope.body)
+            return
+        if artifact_type == ArtifactType.ACTION_INTENT:
+            self._validate_action_intent(envelope.header.task_id, envelope.body)
+            return
+        if artifact_type == ArtifactType.ACTION_PREVIEW:
+            self._validate_action_preview(envelope.header.task_id, envelope.body)
+            return
+        if artifact_type == ArtifactType.SESSION_CHECKPOINT:
+            self._validate_session_checkpoint(envelope.body)
+            return
+        if artifact_type == ArtifactType.RESUME_PACKET:
+            self._validate_resume_packet(envelope.header.task_id, envelope.body)
+            return
+        if artifact_type == ArtifactType.RESULT and current_state == TaskState.PRE_EXECUTE_CHECK:
+            if self._runtime_session_started(envelope.header.task_id):
+                self._validate_runtime_commit_path(envelope.header.task_id)
+
+    def _validate_observation_assessment(self, assessment: ObservationAssessmentBody) -> None:
+        if assessment.trust_level == "trusted" and assessment.taint_detected:
+            raise GovernanceError("tainted observation cannot be marked trusted")
+        if assessment.trusted_observation_minimum and assessment.trust_level in {"untrusted", "tainted"}:
+            raise GovernanceError("trusted_observation_minimum requires trusted or verified observation")
+        if assessment.source_channel in {"web", "gui"} and assessment.trust_level == "trusted" and not assessment.taint_reasons:
+            return
+
+    def _validate_action_intent(self, task_id: str, intent: ActionIntentBody) -> None:
+        if self._side_effect_rank(intent.side_effect_level) >= self._side_effect_rank("external_write"):
+            assessment = self.store.latest_body(task_id, ArtifactType.OBSERVATION_ASSESSMENT)
+            if not isinstance(assessment, ObservationAssessmentBody) or not assessment.trusted_observation_minimum:
+                raise GovernanceError("high-risk action requires trusted_observation_minimum")
+            if assessment.taint_detected:
+                raise GovernanceError("tainted observation cannot generate high-risk action")
+            if intent.requires_frozen_snapshot and not self._has_frozen_snapshot(task_id):
+                raise GovernanceError("high-risk action requires frozen state snapshot")
+
+    def _validate_action_preview(self, task_id: str, preview: ActionPreviewBody) -> None:
+        assessment = self.store.latest_body(task_id, ArtifactType.OBSERVATION_ASSESSMENT)
+        if preview.preview_status in {"allow", "allow_with_conditions"}:
+            if isinstance(assessment, ObservationAssessmentBody) and assessment.taint_detected:
+                raise GovernanceError("tainted observation cannot enter preview allow path")
+            if (
+                isinstance(assessment, ObservationAssessmentBody)
+                and assessment.source_channel in {"web", "gui"}
+                and "prompt_injection" in " ".join(assessment.taint_reasons)
+            ):
+                raise GovernanceError("untrusted external text cannot directly justify preview allow")
+            if self._is_high_risk_action(task_id):
+                if not isinstance(assessment, ObservationAssessmentBody) or not assessment.trusted_observation_minimum:
+                    raise GovernanceError("preview allow requires trusted_observation_minimum")
+                if not self._has_frozen_snapshot(task_id):
+                    raise GovernanceError("high-risk preview requires frozen state snapshot")
+
+    def _validate_session_checkpoint(self, checkpoint: SessionCheckpointBody) -> None:
+        if checkpoint.restorable and (not checkpoint.bound_snapshot_id or not checkpoint.checkpoint_summary):
+            raise GovernanceError("restorable checkpoint requires bound snapshot and summary")
+
+    def _validate_resume_packet(self, task_id: str, resume: ResumePacketBody) -> None:
+        checkpoint = self.store.resolve_effective_artifact(task_id, ArtifactType.SESSION_CHECKPOINT)
+        if checkpoint is None:
+            raise GovernanceError("resume requires latest session_checkpoint")
+        checkpoint_body = checkpoint.envelope.body
+        if not isinstance(checkpoint_body, SessionCheckpointBody):
+            raise GovernanceError("resume requires valid session_checkpoint")
+        if resume.resume_from_checkpoint_id != checkpoint_body.checkpoint_id:
+            raise GovernanceError("resume must bind latest session_checkpoint")
+        if resume.stale_risk == "high" and resume.resume_strategy == "continue":
+            raise GovernanceError("high stale_risk resume must reobserve or refreeze")
+
+    def _validate_runtime_commit_path(self, task_id: str) -> None:
+        assessment = self.store.latest_body(task_id, ArtifactType.OBSERVATION_ASSESSMENT)
+        if isinstance(assessment, ObservationAssessmentBody):
+            if assessment.taint_detected:
+                raise GovernanceError("tainted observation cannot enter commit path")
+            if not assessment.trusted_observation_minimum and self._is_high_risk_action(task_id):
+                raise GovernanceError("commit path requires trusted_observation_minimum for high-risk action")
+        if self._is_high_risk_action(task_id) and not self._has_frozen_snapshot(task_id):
+            raise GovernanceError("high-risk commit path requires frozen state snapshot")
+
+    def _has_frozen_snapshot(self, task_id: str) -> bool:
+        snapshot = self.store.resolve_effective_artifact(task_id, ArtifactType.WORLD_STATE_SNAPSHOT)
+        if snapshot is None:
+            return False
+        body = snapshot.envelope.body
+        return isinstance(body, WorldStateSnapshotBody) and body.runtime_phase == "freeze_state" and body.sanitized
+
+    def _is_high_risk_action(self, task_id: str) -> bool:
+        intent = self.store.latest_body(task_id, ArtifactType.ACTION_INTENT)
+        if isinstance(intent, ActionIntentBody):
+            return self._side_effect_rank(intent.side_effect_level) >= self._side_effect_rank("external_write")
+        return False
+
+    def _runtime_session_started(self, task_id: str) -> bool:
+        return any(
+            self.store.resolve_effective_artifact(task_id, artifact_type) is not None
+            for artifact_type in {
+                ArtifactType.WORLD_STATE_SNAPSHOT,
+                ArtifactType.OBSERVATION_ASSESSMENT,
+                ArtifactType.ACTION_INTENT,
+                ArtifactType.ACTION_PREVIEW,
+                ArtifactType.SESSION_CHECKPOINT,
+                ArtifactType.RESUME_PACKET,
+            }
+        )
 
     def _validate_receipt(
         self,
