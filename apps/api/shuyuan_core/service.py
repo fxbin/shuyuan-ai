@@ -25,8 +25,10 @@ from .models import (
     PublishReceiptBody,
     ResultBody,
     ReviewReportBody,
+    TaskProfileBody,
     WorkOrderBody,
 )
+from .routing import build_route_decision
 from .store import GovernanceStore, SubmissionResult, create_governance_store
 from .store import ArchiveRecord
 
@@ -54,6 +56,10 @@ class GovernanceService:
         task = self.store.create_task(user_intent=user_intent, trace_id=trace_id)
         return task.model_dump(mode="json")
 
+    def preview_route(self, payload: dict[str, Any]) -> dict[str, Any]:
+        profile = TaskProfileBody.model_validate(payload)
+        return build_route_decision(profile).model_dump(mode="json")
+
     def submit_envelope(self, payload: dict[str, Any]) -> SubmissionResult:
         envelope = StrictEnvelope.parse_payload(payload)
         task = self.store.get_task(envelope.header.task_id)
@@ -73,6 +79,7 @@ class GovernanceService:
                 getattr(envelope.body, "request_idempotency_key", None),
             )
         try:
+            envelope = self._attach_route_decision(envelope)
             envelope = self._attach_object_store_refs(envelope)
             envelope = self._hydrate_artifact_identity(envelope)
             next_state = self._resolve_next_state(task.current_state, envelope)
@@ -103,6 +110,13 @@ class GovernanceService:
         normalized = artifact_type if isinstance(artifact_type, ArtifactType) else ArtifactType(artifact_type)
         artifact = self.store.resolve_effective_artifact(task_id, normalized)
         return artifact.envelope.model_dump(mode="json", by_alias=True) if artifact else None
+
+    def get_route_decision(self, task_id: str) -> dict[str, Any] | None:
+        self.store.get_task(task_id)
+        artifact = self.store.resolve_effective_artifact(task_id, ArtifactType.TASK_PROFILE)
+        if artifact is None:
+            return None
+        return build_route_decision(artifact.envelope.body).model_dump(mode="json")
 
     def build_yushi_context(self, task_id: str) -> dict[str, Any]:
         task = self.store.get_task(task_id)
@@ -494,6 +508,23 @@ class GovernanceService:
             record.model_dump(mode="json"),
         )
         return record.model_copy(update={"bundle_ref": stored.uri})
+
+    def _attach_route_decision(self, envelope: StrictEnvelope) -> StrictEnvelope:
+        if envelope.header.artifact_type != ArtifactType.TASK_PROFILE:
+            return envelope
+        body = envelope.body
+        if not isinstance(body, TaskProfileBody):
+            return envelope
+        route_decision = build_route_decision(body).model_dump(mode="json")
+        updated_body = body.model_copy(
+            update={
+                "ext": {
+                    **body.ext,
+                    "route_decision": route_decision,
+                }
+            }
+        )
+        return envelope.model_copy(update={"body": updated_body})
 
     def _validate_archive_readiness(self, task_id: str) -> None:
         events = self.store.list_events(task_id)

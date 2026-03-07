@@ -16,6 +16,10 @@ class CreateTaskRequest(BaseModel):
     trace_id: str | None = None
 
 
+class RoutePreviewRequest(BaseModel):
+    payload: dict[str, Any]
+
+
 def create_app(service: GovernanceService | None = None) -> FastAPI:
     settings = get_settings()
     svc = service or GovernanceService()
@@ -29,6 +33,13 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
     @router.post("/tasks")
     async def create_task(request: CreateTaskRequest) -> dict[str, Any]:
         return svc.create_task(user_intent=request.user_intent, trace_id=request.trace_id)
+
+    @router.post("/route/preview")
+    async def preview_route(request: RoutePreviewRequest) -> dict[str, Any]:
+        try:
+            return svc.preview_route(request.payload)
+        except (GovernanceError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @router.get("/schemas")
     async def list_schemas() -> list[dict[str, str]]:
@@ -74,6 +85,13 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
     async def get_yushi_context(task_id: str) -> dict[str, Any]:
         try:
             return svc.build_yushi_context(task_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @router.get("/tasks/{task_id}/route-decision")
+    async def get_route_decision(task_id: str) -> dict[str, Any] | None:
+        try:
+            return svc.get_route_decision(task_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
