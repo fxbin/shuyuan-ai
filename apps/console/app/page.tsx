@@ -96,6 +96,35 @@ type RouteDecision = {
   };
 };
 
+type RuntimeRouteDecision = {
+  decision: string;
+  lane_choice: string;
+  complexity_level: string;
+  module_set: string[];
+  action: string;
+  blocking_reasons: string[];
+  route_reason: string;
+  source_signals: Record<string, unknown>;
+};
+
+type RuntimeLineage = {
+  task_id: string;
+  runtime_session_id?: string | null;
+  checkpoint_id?: string | null;
+  items: Array<{
+    task_id: string;
+    event_id: string;
+    artifact_type: string;
+    runtime_session_id: string;
+    runtime_phase: string;
+    snapshot_id?: string | null;
+    checkpoint_id?: string | null;
+    resume_from_checkpoint_id?: string | null;
+    trust_level?: string | null;
+    recorded_at: string;
+  }>;
+};
+
 type EventEnvelope = {
   header: {
     event_id: string;
@@ -162,20 +191,25 @@ export default async function HomePage() {
   const activeTask = tasks.find((item) => item.current_state !== "archived") ?? tasks[0] ?? null;
   const selectedTaskId = activeTask?.task_id ?? archives[0]?.task_id ?? null;
 
-  const [context, routeDecision, events, roundtableStatus, challengeStatus, auditStatus, advice] = selectedTaskId
+  const [context, routeDecision, runtimeRouteDecision, runtimeLineage, events, roundtableStatus, challengeStatus, auditStatus, advice] = selectedTaskId
     ? await Promise.all([
         fetchJson<YushiContext>(`/tasks/${selectedTaskId}/extractors/yushi-context`),
         fetchJson<RouteDecision>(`/tasks/${selectedTaskId}/route-decision`),
+        fetchJson<RuntimeRouteDecision>(`/tasks/${selectedTaskId}/runtime/route-decision`),
+        fetchJson<RuntimeLineage>(`/tasks/${selectedTaskId}/runtime/lineage?limit=24`),
         fetchJson<EventEnvelope[]>(`/tasks/${selectedTaskId}/events`),
         fetchJson<OperationStatus>(`/tasks/${selectedTaskId}/operations/roundtable`),
         fetchJson<OperationStatus>(`/tasks/${selectedTaskId}/operations/challenge`),
         fetchJson<OperationStatus>(`/tasks/${selectedTaskId}/operations/audit`),
         fetchJson<EvolveAdvice>(`/tasks/${selectedTaskId}/evolve/advice`),
       ])
-    : [null, null, null, null, null, null, null];
+    : [null, null, null, null, null, null, null, null, null];
 
   const artifactEntries = Object.entries(context?.artifacts ?? {}).slice(0, 8);
   const signalEntries = Object.entries(context?.signals ?? {}).slice(0, 6);
+  const runtimeItems = runtimeLineage?.items ?? [];
+  const runtimeSessions = Array.from(new Set(runtimeItems.map((item) => item.runtime_session_id)));
+  const latestRuntimeItem = runtimeItems[runtimeItems.length - 1] ?? null;
 
   return (
     <main className="shell">
@@ -321,6 +355,37 @@ export default async function HomePage() {
                       </div>
                     ))}
                   </div>
+                  <div className="runtime-summary-grid">
+                    <div>
+                      <label>Runtime Route</label>
+                      <div className="muted">
+                        {(runtimeRouteDecision?.decision ?? "--")} / {(runtimeRouteDecision?.action ?? "--")}
+                      </div>
+                    </div>
+                    <div>
+                      <label>Runtime Lane</label>
+                      <div className="muted">
+                        {(runtimeRouteDecision?.lane_choice ?? "--")} / {(runtimeRouteDecision?.complexity_level ?? "--")}
+                      </div>
+                    </div>
+                    <div>
+                      <label>Sessions</label>
+                      <div className="muted mono">{runtimeSessions.join(" / ") || "--"}</div>
+                    </div>
+                    <div>
+                      <label>Latest Phase</label>
+                      <div className="muted">
+                        {latestRuntimeItem?.runtime_phase ?? "--"} · {latestRuntimeItem?.trust_level ?? "--"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pill-row">
+                    {(runtimeRouteDecision?.blocking_reasons ?? []).map((reason) => (
+                      <span className="pill danger" key={reason}>
+                        {reason}
+                      </span>
+                    ))}
+                  </div>
                 </article>
               </div>
 
@@ -364,24 +429,52 @@ export default async function HomePage() {
 
                 <article className="panel">
                   <div className="section-head">
-                    <strong>Effective Artifacts</strong>
-                    <span className="pill neutral">{artifactEntries.length}</span>
+                    <strong>Runtime Timeline</strong>
+                    <span className="pill neutral">{runtimeItems.length}</span>
                   </div>
-                  <div className="artifact-list">
-                    {artifactEntries.map(([name, artifact]) => (
-                      <div className="artifact-card" key={name}>
-                        <div className="artifact-head">
-                          <strong>{name}</strong>
-                          <span className="pill neutral">{context.effective_version[name] ?? `v${artifact.version}`}</span>
-                        </div>
-                        <div className="muted mono">{artifact.event_id}</div>
-                        <div className="artifact-summary">{artifact.envelope.summary ?? "no summary"}</div>
-                        <pre>{compactJson(artifact.envelope.body ?? {})}</pre>
-                      </div>
-                    ))}
-                  </div>
+                  {runtimeItems.length === 0 ? (
+                    <div className="empty compact">当前任务还没有 runtime lineage。</div>
+                  ) : (
+                    <div className="runtime-timeline">
+                      {runtimeItems.slice(-8).reverse().map((item) => (
+                        <article className="runtime-card" key={item.event_id}>
+                          <div className="artifact-head">
+                            <strong>{item.runtime_phase}</strong>
+                            <span className="pill neutral">{item.artifact_type}</span>
+                          </div>
+                          <div className="muted mono">{item.runtime_session_id}</div>
+                          <div className="runtime-meta">
+                            <span>{item.snapshot_id ?? "--"}</span>
+                            <span>{item.checkpoint_id ?? item.resume_from_checkpoint_id ?? "--"}</span>
+                            <span>{item.trust_level ?? "--"}</span>
+                          </div>
+                          <div className="muted">{formatTime(item.recorded_at)}</div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
                 </article>
               </div>
+
+              <article className="panel">
+                <div className="section-head">
+                  <strong>Effective Artifacts</strong>
+                  <span className="pill neutral">{artifactEntries.length}</span>
+                </div>
+                <div className="artifact-list">
+                  {artifactEntries.map(([name, artifact]) => (
+                    <div className="artifact-card" key={name}>
+                      <div className="artifact-head">
+                        <strong>{name}</strong>
+                        <span className="pill neutral">{context.effective_version[name] ?? `v${artifact.version}`}</span>
+                      </div>
+                      <div className="muted mono">{artifact.event_id}</div>
+                      <div className="artifact-summary">{artifact.envelope.summary ?? "no summary"}</div>
+                      <pre>{compactJson(artifact.envelope.body ?? {})}</pre>
+                    </div>
+                  ))}
+                </div>
+              </article>
             </div>
           )}
         </div>
