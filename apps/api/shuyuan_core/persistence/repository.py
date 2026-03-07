@@ -22,8 +22,10 @@ from ..store import (
     ArchiveRecord,
     ArtifactVersionRecord,
     EventRecord,
+    RuntimeLineageRecord,
     SubmissionResult,
     TaskRecord,
+    _runtime_lineage_from_envelope,
 )
 from .models import (
     ApprovalModel,
@@ -35,6 +37,7 @@ from .models import (
     ExternalActionReceiptModel,
     KnowledgeArchiveModel,
     PolicyDecisionModel,
+    RuntimeLineageModel,
     TaskModel,
 )
 
@@ -138,6 +141,7 @@ class SQLAlchemyGovernanceStore:
 
             self._sync_effective_artifact(session, envelope)
             self._write_specialized_tables(session, envelope)
+            self._record_runtime_lineage(session, envelope)
 
             task.current_state = next_state.value
             if next_state == TaskState.ARCHIVED:
@@ -213,6 +217,7 @@ class SQLAlchemyGovernanceStore:
             model.knowledge_signals_json = record.knowledge_signals
             model.source_event_ids_json = record.source_event_ids
             model.bundle_ref = record.bundle_ref
+            model.runtime_lineage_json = record.runtime_lineage
             session.add(model)
         return record
 
@@ -225,6 +230,46 @@ class SQLAlchemyGovernanceStore:
         with self.session_factory() as session:
             stmt = select(KnowledgeArchiveModel).order_by(KnowledgeArchiveModel.archived_at.desc()).limit(limit)
             return [self._to_archive_record(model) for model in session.scalars(stmt).all()]
+
+    def record_runtime_lineage(self, record: RuntimeLineageRecord) -> RuntimeLineageRecord:
+        with self.session_factory.begin() as session:
+            model = session.scalar(select(RuntimeLineageModel).where(RuntimeLineageModel.event_id == record.event_id))
+            if model is None:
+                model = RuntimeLineageModel(event_id=record.event_id)
+            model.task_id = record.task_id
+            model.artifact_type = record.artifact_type.value
+            model.runtime_session_id = record.runtime_session_id
+            model.runtime_phase = record.runtime_phase
+            model.snapshot_id = record.snapshot_id
+            model.parent_snapshot_id = record.parent_snapshot_id
+            model.checkpoint_id = record.checkpoint_id
+            model.resume_from_checkpoint_id = record.resume_from_checkpoint_id
+            model.observation_hash = record.observation_hash
+            model.source_channel = record.source_channel
+            model.trust_level = record.trust_level
+            model.recorded_at = record.recorded_at
+            session.add(model)
+        return record
+
+    def list_runtime_lineage(
+        self,
+        task_id: str,
+        *,
+        runtime_session_id: str | None = None,
+        checkpoint_id: str | None = None,
+        limit: int = 200,
+    ) -> list[RuntimeLineageRecord]:
+        with self.session_factory() as session:
+            stmt = select(RuntimeLineageModel).where(RuntimeLineageModel.task_id == task_id)
+            if runtime_session_id is not None:
+                stmt = stmt.where(RuntimeLineageModel.runtime_session_id == runtime_session_id)
+            if checkpoint_id is not None:
+                stmt = stmt.where(
+                    (RuntimeLineageModel.checkpoint_id == checkpoint_id)
+                    | (RuntimeLineageModel.resume_from_checkpoint_id == checkpoint_id)
+                )
+            stmt = stmt.order_by(RuntimeLineageModel.recorded_at.asc()).limit(limit)
+            return [self._to_runtime_lineage_record(model) for model in session.scalars(stmt).all()]
 
     def _sync_effective_artifact(self, session: Session, envelope: StrictEnvelope) -> None:
         artifact_id = envelope.header.artifact_id or envelope.header.event_id
@@ -374,6 +419,27 @@ class SQLAlchemyGovernanceStore:
                 )
             )
 
+    def _record_runtime_lineage(self, session: Session, envelope: StrictEnvelope) -> None:
+        record = _runtime_lineage_from_envelope(envelope)
+        if record is None:
+            return
+        model = session.scalar(select(RuntimeLineageModel).where(RuntimeLineageModel.event_id == record.event_id))
+        if model is None:
+            model = RuntimeLineageModel(event_id=record.event_id)
+        model.task_id = record.task_id
+        model.artifact_type = record.artifact_type.value
+        model.runtime_session_id = record.runtime_session_id
+        model.runtime_phase = record.runtime_phase
+        model.snapshot_id = record.snapshot_id
+        model.parent_snapshot_id = record.parent_snapshot_id
+        model.checkpoint_id = record.checkpoint_id
+        model.resume_from_checkpoint_id = record.resume_from_checkpoint_id
+        model.observation_hash = record.observation_hash
+        model.source_channel = record.source_channel
+        model.trust_level = record.trust_level
+        model.recorded_at = record.recorded_at
+        session.add(model)
+
     def _approval_digest_from_envelope(self, envelope: StrictEnvelope) -> str | None:
         if envelope.header.artifact_type == ArtifactType.REVIEW_REPORT:
             body = envelope.body
@@ -435,4 +501,22 @@ class SQLAlchemyGovernanceStore:
             knowledge_signals=model.knowledge_signals_json,
             source_event_ids=model.source_event_ids_json,
             bundle_ref=model.bundle_ref,
+            runtime_lineage=model.runtime_lineage_json or {},
+        )
+
+    def _to_runtime_lineage_record(self, model: RuntimeLineageModel) -> RuntimeLineageRecord:
+        return RuntimeLineageRecord(
+            task_id=model.task_id,
+            event_id=model.event_id,
+            artifact_type=ArtifactType(model.artifact_type),
+            runtime_session_id=model.runtime_session_id,
+            runtime_phase=model.runtime_phase,
+            snapshot_id=model.snapshot_id,
+            parent_snapshot_id=model.parent_snapshot_id,
+            checkpoint_id=model.checkpoint_id,
+            resume_from_checkpoint_id=model.resume_from_checkpoint_id,
+            observation_hash=model.observation_hash,
+            source_channel=model.source_channel,
+            trust_level=model.trust_level,
+            recorded_at=model.recorded_at,
         )

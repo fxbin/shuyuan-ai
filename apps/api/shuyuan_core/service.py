@@ -179,6 +179,28 @@ class GovernanceService:
             },
         }
 
+    def get_runtime_lineage(
+        self,
+        task_id: str,
+        *,
+        runtime_session_id: str | None = None,
+        checkpoint_id: str | None = None,
+        limit: int = 200,
+    ) -> dict[str, Any]:
+        self.store.get_task(task_id)
+        lineage = self.store.list_runtime_lineage(
+            task_id,
+            runtime_session_id=runtime_session_id,
+            checkpoint_id=checkpoint_id,
+            limit=limit,
+        )
+        return {
+            "task_id": task_id,
+            "runtime_session_id": runtime_session_id,
+            "checkpoint_id": checkpoint_id,
+            "items": [item.model_dump(mode="json") for item in lineage],
+        }
+
     def submit_runtime_artifact(
         self,
         task_id: str,
@@ -351,7 +373,13 @@ class GovernanceService:
         self._validate_archive_readiness(task_id)
         task_events = self.store.list_events(task_id)
         context = build_yushi_context(task=task, task_events=task_events, store=self.store)
-        archive_record = build_archive_record(task=task, context=context, task_events=task_events)
+        runtime_lineage = self.store.list_runtime_lineage(task_id, limit=500)
+        archive_record = build_archive_record(
+            task=task,
+            context=context,
+            task_events=task_events,
+            runtime_lineage=runtime_lineage,
+        )
         archive_record = self._attach_archive_bundle(archive_record)
         self.store.upsert_archive_record(archive_record)
         archived = self.store.update_task_state(task_id, TaskState.ARCHIVED)

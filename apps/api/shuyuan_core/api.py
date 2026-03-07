@@ -138,6 +138,30 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    @router.get("/tasks/{task_id}/runtime/lineage")
+    async def get_runtime_lineage(
+        task_id: str,
+        runtime_session_id: str | None = None,
+        checkpoint_id: str | None = None,
+        limit: int = 200,
+    ) -> dict[str, Any]:
+        try:
+            return svc.get_runtime_lineage(
+                task_id,
+                runtime_session_id=runtime_session_id,
+                checkpoint_id=checkpoint_id,
+                limit=limit,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @router.get("/tasks/{task_id}/runtime/sessions/{runtime_session_id}/lineage")
+    async def get_runtime_session_lineage(task_id: str, runtime_session_id: str, limit: int = 200) -> dict[str, Any]:
+        try:
+            return svc.get_runtime_lineage(task_id, runtime_session_id=runtime_session_id, limit=limit)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
     @router.post("/tasks/{task_id}/runtime/{artifact_type}")
     async def submit_runtime_artifact(
         task_id: str,

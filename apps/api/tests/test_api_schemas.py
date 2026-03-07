@@ -147,3 +147,11 @@ def test_runtime_session_api_is_exposed() -> None:
     state = client.get(f"/api/v2/tasks/{task_id}/runtime/sessions/{runtime_session_id}")
     assert state.status_code == 200
     assert state.json()["runtime_session_id"] == runtime_session_id
+
+    lineage = client.get(f"/api/v2/tasks/{task_id}/runtime/lineage")
+    assert lineage.status_code == 200
+    assert lineage.json()["items"][0]["runtime_session_id"] == runtime_session_id
+
+    session_lineage = client.get(f"/api/v2/tasks/{task_id}/runtime/sessions/{runtime_session_id}/lineage")
+    assert session_lineage.status_code == 200
+    assert session_lineage.json()["items"][0]["artifact_type"] == "world_state_snapshot"

@@ -9,11 +9,27 @@ from apps.api.shuyuan_core.api import create_app
 from apps.api.shuyuan_core.object_store import LocalObjectStore
 from apps.api.shuyuan_core.service import GovernanceService
 from apps.api.tests.test_challenge_runner import _prepare_pre_commit_task
+from apps.api.tests.test_runtime_artifacts import make_runtime_body
 
 
 def test_archive_task_persists_knowledge_projection(tmp_path) -> None:
     service = GovernanceService(object_store=LocalObjectStore(root=tmp_path, bucket="artifacts"))
     task_id = _prepare_pre_commit_task(service)
+    service.submit_runtime_artifact(
+        task_id,
+        "world_state_snapshot",
+        "freeze_state",
+        make_runtime_body(
+            "freeze_state",
+            runtime_session_id="RS-ARCH-1",
+            snapshot_id="SN-ARCH-1",
+            observed_at="2026-03-07T00:00:00Z",
+            state_digest="sha256:archive-state",
+            observation_summary="archive snapshot",
+            sanitized=True,
+            visible_targets=["publish"],
+        ),
+    )
     service.run_challenge(task_id)
     service.run_audit(task_id)
 
@@ -26,6 +42,8 @@ def test_archive_task_persists_knowledge_projection(tmp_path) -> None:
     assert "challenge_report" in record["summary"]["effective_artifacts"]
     assert record["retrospective"]["quality_ledger"]["challenge_test_count"] > 0
     assert record["summary"]["value_density"] > 0
+    assert record["runtime_lineage"]["session_count"] == 1
+    assert record["retrospective"]["runtime_governance"]["latest_runtime_phase"] == "freeze_state"
 
 
 def test_archive_record_endpoint_returns_projection(tmp_path) -> None:

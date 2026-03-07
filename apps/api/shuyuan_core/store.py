@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Protocol
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .config import Settings, get_settings
 from .db import create_session_factory, create_sync_engine
@@ -63,6 +63,25 @@ class ArchiveRecord(BaseModel):
     knowledge_signals: dict[str, Any]
     source_event_ids: list[str]
     bundle_ref: str | None = None
+    runtime_lineage: dict[str, Any] = Field(default_factory=dict)
+
+
+class RuntimeLineageRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: str
+    event_id: str
+    artifact_type: ArtifactType
+    runtime_session_id: str
+    runtime_phase: str
+    snapshot_id: str | None = None
+    parent_snapshot_id: str | None = None
+    checkpoint_id: str | None = None
+    resume_from_checkpoint_id: str | None = None
+    observation_hash: str | None = None
+    source_channel: str | None = None
+    trust_level: str | None = None
+    recorded_at: datetime
 
 
 class GovernanceStore(Protocol):
@@ -96,6 +115,17 @@ class GovernanceStore(Protocol):
 
     def list_archive_records(self, limit: int = 50) -> list[ArchiveRecord]: ...
 
+    def record_runtime_lineage(self, record: RuntimeLineageRecord) -> RuntimeLineageRecord: ...
+
+    def list_runtime_lineage(
+        self,
+        task_id: str,
+        *,
+        runtime_session_id: str | None = None,
+        checkpoint_id: str | None = None,
+        limit: int = 200,
+    ) -> list[RuntimeLineageRecord]: ...
+
 
 class InMemoryGovernanceStore:
     def __init__(self) -> None:
@@ -104,6 +134,7 @@ class InMemoryGovernanceStore:
         self.artifact_versions: dict[str, list[ArtifactVersionRecord]] = {}
         self.event_index: dict[str, EventRecord] = {}
         self.archive_records: dict[str, ArchiveRecord] = {}
+        self.runtime_lineage: list[RuntimeLineageRecord] = []
 
     def ensure_schema(self) -> None:
         return None
@@ -153,6 +184,9 @@ class InMemoryGovernanceStore:
                 envelope=envelope,
             )
         )
+        runtime_lineage = _runtime_lineage_from_envelope(envelope)
+        if runtime_lineage is not None:
+            self.record_runtime_lineage(runtime_lineage)
         self.update_task_state(envelope.header.task_id, next_state)
 
     def _add_artifact_version(self, record: ArtifactVersionRecord) -> None:
@@ -216,6 +250,61 @@ class InMemoryGovernanceStore:
     def list_archive_records(self, limit: int = 50) -> list[ArchiveRecord]:
         records = sorted(self.archive_records.values(), key=lambda item: item.archived_at, reverse=True)
         return records[:limit]
+
+    def record_runtime_lineage(self, record: RuntimeLineageRecord) -> RuntimeLineageRecord:
+        self.runtime_lineage = [
+            item
+            for item in self.runtime_lineage
+            if not (item.task_id == record.task_id and item.event_id == record.event_id)
+        ]
+        self.runtime_lineage.append(record)
+        self.runtime_lineage.sort(key=lambda item: item.recorded_at)
+        return record
+
+    def list_runtime_lineage(
+        self,
+        task_id: str,
+        *,
+        runtime_session_id: str | None = None,
+        checkpoint_id: str | None = None,
+        limit: int = 200,
+    ) -> list[RuntimeLineageRecord]:
+        records = [item for item in self.runtime_lineage if item.task_id == task_id]
+        if runtime_session_id is not None:
+            records = [item for item in records if item.runtime_session_id == runtime_session_id]
+        if checkpoint_id is not None:
+            records = [
+                item
+                for item in records
+                if item.checkpoint_id == checkpoint_id or item.resume_from_checkpoint_id == checkpoint_id
+            ]
+        records.sort(key=lambda item: item.recorded_at)
+        return records[:limit]
+
+
+def _runtime_lineage_from_envelope(envelope: StrictEnvelope) -> RuntimeLineageRecord | None:
+    body = envelope.body
+    runtime_session_id = getattr(body, "runtime_session_id", None)
+    if runtime_session_id is None:
+        return None
+    runtime_phase = envelope.header.runtime_phase
+    if runtime_phase is None:
+        return None
+    return RuntimeLineageRecord(
+        task_id=envelope.header.task_id,
+        event_id=envelope.header.event_id,
+        artifact_type=envelope.header.artifact_type,
+        runtime_session_id=runtime_session_id,
+        runtime_phase=runtime_phase.value,
+        snapshot_id=getattr(body, "snapshot_id", None),
+        parent_snapshot_id=getattr(body, "parent_snapshot_id", None),
+        checkpoint_id=getattr(body, "checkpoint_id", None),
+        resume_from_checkpoint_id=getattr(body, "resume_from_checkpoint_id", None),
+        observation_hash=getattr(body, "observation_hash", None),
+        source_channel=getattr(body, "source_channel", None),
+        trust_level=getattr(body, "trust_level", None),
+        recorded_at=envelope.header.timestamp,
+    )
 
 
 ACTIVE_EFFECTIVE_STATUSES = {

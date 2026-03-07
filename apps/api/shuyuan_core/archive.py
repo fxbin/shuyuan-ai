@@ -4,10 +4,15 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .extractors import YushiContext
-from .store import ArchiveRecord, EventRecord, TaskRecord
+from .store import ArchiveRecord, EventRecord, RuntimeLineageRecord, TaskRecord
 
 
-def build_archive_record(task: TaskRecord, context: YushiContext, task_events: list[EventRecord]) -> ArchiveRecord:
+def build_archive_record(
+    task: TaskRecord,
+    context: YushiContext,
+    task_events: list[EventRecord],
+    runtime_lineage: list[RuntimeLineageRecord] | None = None,
+) -> ArchiveRecord:
     profile = _artifact_body(context, "task_profile")
     audit = _artifact_body(context, "audit_report")
     challenge = _artifact_body(context, "challenge_report")
@@ -15,6 +20,11 @@ def build_archive_record(task: TaskRecord, context: YushiContext, task_events: l
     exploration = context.signals.get("exploration", {})
     receipt = context.signals.get("receipt", {})
     roundtable = context.signals.get("roundtable", {})
+    lineage = runtime_lineage or []
+    session_ids = sorted({item.runtime_session_id for item in lineage})
+    checkpoint_ids = [item.checkpoint_id for item in lineage if item.checkpoint_id]
+    resume_ids = [item.resume_from_checkpoint_id for item in lineage if item.resume_from_checkpoint_id]
+    latest_runtime = lineage[-1] if lineage else None
 
     total_token_used = sum(event.envelope.budget.token_used for event in task_events)
     total_tool_used = sum(event.envelope.budget.tool_used for event in task_events)
@@ -43,6 +53,7 @@ def build_archive_record(task: TaskRecord, context: YushiContext, task_events: l
             "audit_verdict": audit.get("verdict"),
             "score_snapshot": context.scores.model_dump(mode="json"),
             "value_density": value_density,
+            "runtime_session_count": len(session_ids),
         },
         retrospective={
             "routing_assessment": {
@@ -72,6 +83,13 @@ def build_archive_record(task: TaskRecord, context: YushiContext, task_events: l
                 "open_disagreements": list(context.governance_carryover.open_disagreements),
                 "minority_view": list(context.governance_carryover.minority_view),
             },
+            "runtime_governance": {
+                "runtime_session_ids": session_ids,
+                "checkpoint_ids": checkpoint_ids,
+                "resume_bindings": resume_ids,
+                "latest_runtime_phase": latest_runtime.runtime_phase if latest_runtime else None,
+                "latest_trust_level": latest_runtime.trust_level if latest_runtime else None,
+            },
             "recommendations": list(audit.get("recommendations", [])),
         },
         knowledge_signals={
@@ -84,6 +102,13 @@ def build_archive_record(task: TaskRecord, context: YushiContext, task_events: l
             "roundtable_blocking_minority": roundtable.get("blocking_minority"),
         },
         source_event_ids=[event.envelope.header.event_id for event in task_events],
+        runtime_lineage={
+            "session_count": len(session_ids),
+            "sessions": session_ids,
+            "checkpoint_count": len(checkpoint_ids),
+            "resume_count": len(resume_ids),
+            "latest_runtime_phase": latest_runtime.runtime_phase if latest_runtime else None,
+        },
     )
 
 

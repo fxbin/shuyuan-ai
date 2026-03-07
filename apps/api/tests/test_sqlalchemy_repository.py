@@ -7,6 +7,7 @@ from apps.api.shuyuan_core.migrations import upgrade_database
 from apps.api.shuyuan_core.persistence.repository import SQLAlchemyGovernanceStore
 from apps.api.shuyuan_core.service import GovernanceService
 from apps.api.tests.test_governance_service import make_envelope, submit_happy_path_setup
+from apps.api.tests.test_runtime_artifacts import make_runtime_body, setup_runtime_task
 
 
 def create_sqlite_service(tmp_path) -> GovernanceService:
@@ -209,3 +210,46 @@ def test_sqlalchemy_store_updates_effective_view_on_new_plan_version(tmp_path) -
     assert effective_plan["header"]["artifact_id"] == plan_artifact_id
     assert effective_plan["header"]["version"] == 2
     assert effective_plan["body"]["goal"] == "ship v2 kernel revised"
+
+
+def test_sqlalchemy_store_persists_runtime_lineage(tmp_path) -> None:
+    service = create_sqlite_service(tmp_path)
+    task_id, _ = setup_runtime_task(service, side_effect_level="read_only")
+
+    service.submit_runtime_artifact(
+        task_id,
+        "world_state_snapshot",
+        "observe",
+        make_runtime_body(
+            "observe",
+            runtime_session_id="RS-SQL-1",
+            snapshot_id="SN-SQL-1",
+            observation_hash="sha256:sql-obs",
+            observed_at=datetime.now(timezone.utc).isoformat(),
+            state_digest="sha256:sql-state",
+            observation_summary="sql runtime",
+            sanitized=True,
+            visible_targets=["submit"],
+        ),
+    )
+    service.submit_runtime_artifact(
+        task_id,
+        "session_checkpoint",
+        "checkpoint",
+        make_runtime_body(
+            "checkpoint",
+            runtime_session_id="RS-SQL-1",
+            snapshot_id="SN-SQL-1",
+            checkpoint_id="CK-SQL-1",
+            captured_at=datetime.now(timezone.utc).isoformat(),
+            checkpoint_summary="paused",
+            bound_snapshot_id="SN-SQL-1",
+            restorable=True,
+        ),
+    )
+
+    lineage = service.get_runtime_lineage(task_id)
+
+    assert len(lineage["items"]) == 2
+    assert lineage["items"][0]["runtime_session_id"] == "RS-SQL-1"
+    assert lineage["items"][1]["checkpoint_id"] == "CK-SQL-1"

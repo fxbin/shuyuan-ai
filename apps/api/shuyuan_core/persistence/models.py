@@ -187,3 +187,31 @@ class KnowledgeArchiveModel(Base):
     knowledge_signals_json: Mapped[dict] = mapped_column(JSON)
     source_event_ids_json: Mapped[list] = mapped_column(JSON)
     bundle_ref: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    runtime_lineage_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class RuntimeLineageModel(Base):
+    __tablename__ = "runtime_lineage"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    task_id: Mapped[str] = mapped_column(String(64), index=True)
+    event_id: Mapped[str] = mapped_column(String(64), index=True)
+    artifact_type: Mapped[str] = mapped_column(String(64), index=True)
+    runtime_session_id: Mapped[str] = mapped_column(String(128), index=True)
+    runtime_phase: Mapped[str] = mapped_column(String(32), index=True)
+    snapshot_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    parent_snapshot_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    checkpoint_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    resume_from_checkpoint_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    observation_hash: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source_channel: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    trust_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    __table_args__ = (
+        Index("idx_runtime_lineage_task_session_time", "task_id", "runtime_session_id", "recorded_at"),
+        Index("idx_runtime_lineage_task_checkpoint", "task_id", "checkpoint_id"),
+        Index("idx_runtime_lineage_task_resume_checkpoint", "task_id", "resume_from_checkpoint_id"),
+        Index("idx_runtime_lineage_task_snapshot", "task_id", "snapshot_id"),
+        Index("idx_runtime_lineage_task_event", "task_id", "event_id", unique=True),
+    )
