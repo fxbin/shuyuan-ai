@@ -486,8 +486,13 @@ class AuditReportBody(StrictModel):
     ext: dict[str, Any] = Field(default_factory=dict)
 
 
+class ExperimentMetrics(StrictModel):
+    primary: list[str] = Field(min_length=1)
+    guardrail: list[str] = Field(min_length=1)
+
+
 class Rollout(StrictModel):
-    kind: str
+    ab_ratio: float = Field(ge=0, le=1)
     duration_days: int = Field(ge=1)
     target_population: str | None = None
 
@@ -495,7 +500,7 @@ class Rollout(StrictModel):
 class ExperimentPlanBody(StrictModel):
     change: str
     hypothesis: str
-    metrics: list[str]
+    metrics: ExperimentMetrics
     rollout: Rollout
     rollback_thresholds: list[str] = Field(min_length=1)
     ext: dict[str, Any] = Field(default_factory=dict)
@@ -642,4 +647,3 @@ ARTIFACT_BODY_MODELS: dict[ArtifactType, type[ArtifactBody]] = {
     ArtifactType.EXTERNAL_COMMIT_RECEIPT: ExternalCommitReceiptBody,
     ArtifactType.PUBLISH_RECEIPT: PublishReceiptBody,
 }
-

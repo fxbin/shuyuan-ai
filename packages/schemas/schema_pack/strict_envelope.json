@@ -1278,6 +1278,33 @@
       "title": "EvidenceRef",
       "type": "object"
     },
+    "ExperimentMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "guardrail": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Guardrail",
+          "type": "array"
+        },
+        "primary": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Primary",
+          "type": "array"
+        }
+      },
+      "required": [
+        "primary",
+        "guardrail"
+      ],
+      "title": "ExperimentMetrics",
+      "type": "object"
+    },
     "ExperimentPlanBody": {
       "additionalProperties": false,
       "properties": {
@@ -1295,11 +1322,7 @@
           "type": "string"
         },
         "metrics": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Metrics",
-          "type": "array"
+          "$ref": "#/$defs/ExperimentMetrics"
         },
         "rollback_thresholds": {
           "items": {
@@ -2649,14 +2672,16 @@
     "Rollout": {
       "additionalProperties": false,
       "properties": {
+        "ab_ratio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Ab Ratio",
+          "type": "number"
+        },
         "duration_days": {
           "minimum": 1,
           "title": "Duration Days",
           "type": "integer"
-        },
-        "kind": {
-          "title": "Kind",
-          "type": "string"
         },
         "target_population": {
           "anyOf": [
@@ -2672,7 +2697,7 @@
         }
       },
       "required": [
-        "kind",
+        "ab_ratio",
         "duration_days"
       ],
       "title": "Rollout",

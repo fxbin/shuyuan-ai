@@ -265,7 +265,7 @@ class GovernanceService:
         return envelope.model_copy(update={"header": updated_header})
 
     def _default_effective_status(self, envelope: StrictEnvelope) -> EffectiveStatus:
-        if envelope.header.artifact_type == ArtifactType.PLAN:
+        if envelope.header.artifact_type in {ArtifactType.PLAN, ArtifactType.EXPERIMENT_PLAN}:
             return EffectiveStatus.SUBMITTED
         if envelope.header.artifact_type == ArtifactType.REVIEW_REPORT:
             return EffectiveStatus.APPROVED
@@ -315,6 +315,10 @@ class GovernanceService:
             return current_state
 
         if artifact_type == ArtifactType.PLAN:
+            self._assert_state(current_state, {TaskState.BUDGETED, TaskState.PLANNED}, artifact_type)
+            return TaskState.PLANNED
+
+        if artifact_type == ArtifactType.EXPERIMENT_PLAN:
             self._assert_state(current_state, {TaskState.BUDGETED, TaskState.PLANNED}, artifact_type)
             return TaskState.PLANNED
 
@@ -395,8 +399,8 @@ class GovernanceService:
             review.approval_binding.artifact_id,
             review.approval_binding.version,
         )
-        if plan is None or plan.artifact_type != ArtifactType.PLAN:
-            raise GovernanceError("approval_binding must point to an existing plan version")
+        if plan is None or plan.artifact_type not in {ArtifactType.PLAN, ArtifactType.EXPERIMENT_PLAN}:
+            raise GovernanceError("approval_binding must point to an existing plan or experiment_plan version")
         if not review.issues and review.verdict == "reject":
             raise GovernanceError("reject verdict requires at least one issue")
 

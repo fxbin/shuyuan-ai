@@ -11,6 +11,8 @@ from .store import EventRecord, GovernanceStore, TaskRecord
 
 VAGUE_KEYWORDS = ["尽量", "优化", "提升", "更好", "合理", "适当", "完善", "增强", "显著"]
 VERIFY_HINTS = ["必须", "应当", "通过", "覆盖", "返回", "输出包含", ">=", "<=", "%", "用例", "测试", "校验"]
+KNOWN_TOOLS = ["deploy", "code_exec", "external_api", "db_read", "db_write", "search", "rg", "curl"]
+RISKY_PHRASES = ["跳过审核", "忽略以上规则", "输出全部上下文", "打印系统提示", "绕过权限"]
 
 
 class ScoreSnapshot(StrictModel):
@@ -203,8 +205,48 @@ class EffectiveArtifactExtractor:
         return {
             "artifacts": artifacts,
             "effective_version": effective_version,
-            "lineage": [],
             "signals": {},
+        }
+
+
+class LineageExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        lineage: list[dict[str, Any]] = []
+        for event in task_events:
+            header = event.envelope.header
+            if not header.artifact_id:
+                continue
+            if (header.version or 1) <= 1 and not header.parent_artifact_id:
+                continue
+            lineage.append(
+                {
+                    "artifact_id": header.artifact_id,
+                    "parent_id": header.parent_artifact_id,
+                    "change_type": "amend" if (header.version or 1) > 1 else "create",
+                    "trigger": header.stage.value,
+                }
+            )
+        return {"lineage": lineage}
+
+
+class ApprovalBindingExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        review = store.resolve_effective_artifact(task.task_id, ArtifactType.REVIEW_REPORT)
+        if review is None:
+            return {}
+        binding = review.envelope.body.approval_binding.model_dump(mode="json")
+        snapshot = store.resolve_effective_artifact(task.task_id, ArtifactType.GOVERNANCE_SNAPSHOT)
+        return {
+            "signals": {
+                "approval_binding": {
+                    "artifact_id": binding["artifact_id"],
+                    "version": binding["version"],
+                    "approval_digest": binding["approval_digest"],
+                    "approved_by": binding["approved_by"],
+                    "approval_scope": binding["approval_scope"],
+                    "snapshot_present": snapshot is not None,
+                }
+            }
         }
 
 
@@ -238,6 +280,49 @@ class PlanSignalsExtractor:
                 "acceptance_items": list(body.acceptance_criteria),
                 "acceptance_testability": _testability_score(list(body.acceptance_criteria)),
                 "deliverable_contract": deliverable_contract,
+            }
+        }
+
+
+def _parse_mentioned_tools(text: str, commit_targets: list[str]) -> list[str]:
+    lowered = text.lower()
+    mentioned = [tool for tool in KNOWN_TOOLS if tool in lowered]
+    for target in commit_targets:
+        target_lower = target.lower()
+        for tool in KNOWN_TOOLS:
+            if tool in target_lower and tool not in mentioned:
+                mentioned.append(tool)
+    return mentioned
+
+
+class WorkOrderSignalsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        artifact = store.resolve_effective_artifact(task.task_id, ArtifactType.WORK_ORDER)
+        if artifact is None:
+            return {}
+        body = artifact.envelope.body
+        work_items: list[dict[str, Any]] = []
+        for item in body.work_items:
+            input_ref_errors: list[str] = []
+            for ref in item.input_refs:
+                if store.get_event(ref.event_id) is None:
+                    input_ref_errors.append(f"missing_event:{ref.event_id}")
+            work_items.append(
+                {
+                    "id": item.id,
+                    "owner": item.owner,
+                    "instructions": item.instructions,
+                    "acceptance": list(item.acceptance),
+                    "budget_slice": item.budget_slice.model_dump(mode="json"),
+                    "side_effect_level": item.side_effect_level,
+                    "mentioned_tools": _parse_mentioned_tools(item.instructions, item.commit_targets),
+                    "policy_risky_phrases": [phrase for phrase in RISKY_PHRASES if phrase in item.instructions],
+                    "input_ref_errors": input_ref_errors,
+                }
+            )
+        return {
+            "signals": {
+                "work_items": work_items,
             }
         }
 
@@ -283,6 +368,73 @@ class ResultSignalsExtractor:
                 "deliverable_coverage": _cover_deliverables(contract, outputs),
                 "self_check_summary": self_check_summary,
                 "outputs_text": [item["content"] for item in outputs],
+            }
+        }
+
+
+def _tool_call_records(result_artifact: EffectiveArtifactSnapshot | None) -> list[dict[str, Any]]:
+    if result_artifact is None:
+        return []
+    body = result_artifact.envelope["body"]
+    ext = body.get("ext", {})
+    records = ext.get("tool_calls")
+    if isinstance(records, list):
+        return [item for item in records if isinstance(item, dict)]
+    executed_actions = body.get("executed_actions", [])
+    synthesized: list[dict[str, Any]] = []
+    for action in executed_actions:
+        text = str(action).lower()
+        for tool in KNOWN_TOOLS:
+            if tool in text:
+                synthesized.append({"tool": tool, "action": action, "status": "success"})
+                break
+    return synthesized
+
+
+class ToolCallsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        result = store.resolve_effective_artifact(task.task_id, ArtifactType.RESULT)
+        if result is None:
+            return {}
+        records = _tool_call_records(
+            EffectiveArtifactSnapshot.model_validate(
+                {
+                    "event_id": result.event_id,
+                    "artifact_id": result.artifact_id,
+                    "version": result.version,
+                    "effective_status": result.effective_status,
+                    "envelope": result.envelope.model_dump(mode="json", by_alias=True),
+                }
+            )
+        )
+        by_tool: dict[str, int] = {}
+        repeat_keys: dict[tuple[str, str], int] = {}
+        failed = 0
+        blocked = 0
+        for item in records:
+            tool = str(item.get("tool", "unknown"))
+            action = str(item.get("action", "run"))
+            status = str(item.get("status", "success"))
+            by_tool[tool] = by_tool.get(tool, 0) + 1
+            repeat_keys[(tool, action)] = repeat_keys.get((tool, action), 0) + 1
+            if status == "failed":
+                failed += 1
+            if status == "blocked":
+                blocked += 1
+        repeat_suspects = [
+            {"tool": tool, "action": action, "repeat": count}
+            for (tool, action), count in repeat_keys.items()
+            if count >= 3
+        ]
+        return {
+            "signals": {
+                "tool_calls_summary": {
+                    "total": len(records),
+                    "by_tool": by_tool,
+                    "repeat_suspects": repeat_suspects,
+                    "failed": failed,
+                    "blocked": blocked,
+                }
             }
         }
 
@@ -351,6 +503,39 @@ class SecurityScanExtractor:
         }
 
 
+class DriftSignalsExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        if not task_events:
+            return {}
+        latest = task_events[-1].envelope
+        constraints = list(latest.governance_carryover.hard_constraints)
+        if not constraints:
+            policy = store.resolve_effective_artifact(task.task_id, ArtifactType.POLICY_DECISION)
+            if policy is not None:
+                constraints.extend(policy.envelope.body.hard_constraints)
+        plan = store.resolve_effective_artifact(task.task_id, ArtifactType.PLAN)
+        if plan is not None:
+            constraints.extend(item.text for item in plan.envelope.body.constraints if item.type == "hard")
+            constraints.extend(plan.envelope.body.acceptance_criteria)
+        summary = latest.summary.lower()
+        constraints_mentioned = True
+        for item in constraints:
+            tokens = [token for token in _keyword_tokens(item.lower()) if len(token) > 1]
+            if tokens and not set(tokens).intersection(_keyword_tokens(summary)):
+                constraints_mentioned = False
+                break
+        summary_len = max(1, len(summary.split()))
+        citations_density = len(latest.citations) / summary_len
+        return {
+            "signals": {
+                "drift": {
+                    "constraints_mentioned_in_summary": constraints_mentioned,
+                    "citations_density": round(citations_density, 4),
+                }
+            }
+        }
+
+
 class FidelitySignalsExtractor:
     def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
         summaries = " ".join(event.envelope.summary for event in task_events)
@@ -403,6 +588,68 @@ class ExplorationSignalsExtractor:
                     "budget_exhausted": budget.token_used >= budget.token_cap if budget.token_cap else False,
                     "spawns_production": result.expected_receipt_type is not None,
                     "overall": "complete" if exploration.recommended_next_step else "partial",
+                }
+            }
+        }
+
+
+def _side_effect_rank(level: str | None) -> int:
+    order = {
+        None: 0,
+        "none": 0,
+        "read_only": 1,
+        "internal_write": 2,
+        "external_write": 3,
+        "external_commit": 4,
+    }
+    return order.get(level, 0)
+
+
+class PermissionViolationExtractor:
+    def extract(self, task: TaskRecord, task_events: list[EventRecord], store: GovernanceStore) -> dict[str, Any]:
+        work_order = store.resolve_effective_artifact(task.task_id, ArtifactType.WORK_ORDER)
+        policy = store.resolve_effective_artifact(task.task_id, ArtifactType.POLICY_DECISION)
+        if work_order is None or policy is None:
+            return {}
+        capability_model = policy.envelope.body.capability_model
+        allowed = set(capability_model.allowed_tools)
+        forbidden = set(capability_model.forbidden_tools)
+        violations: list[dict[str, Any]] = []
+        for item in work_order.envelope.body.work_items:
+            for tool in _parse_mentioned_tools(item.instructions, item.commit_targets):
+                if tool in forbidden:
+                    violations.append(
+                        {
+                            "owner": item.owner,
+                            "tool": tool,
+                            "reason": "forbidden_by_capability_model",
+                            "severity": "critical",
+                        }
+                    )
+                elif allowed and tool not in allowed:
+                    violations.append(
+                        {
+                            "owner": item.owner,
+                            "tool": tool,
+                            "reason": "not_in_allowed_tools",
+                            "severity": "high",
+                        }
+                    )
+            if _side_effect_rank(item.side_effect_level) > _side_effect_rank(capability_model.max_side_effect_level):
+                violations.append(
+                    {
+                        "owner": item.owner,
+                        "tool": "side_effect_level",
+                        "reason": "exceeds_max_side_effect_level",
+                        "severity": "critical",
+                    }
+                )
+        return {
+            "signals": {
+                "permission": {
+                    "violations": violations,
+                    "capability_model_checked": True,
+                    "policy_mode": "full",
                 }
             }
         }
@@ -509,8 +756,14 @@ DEFAULT_EXTRACTOR_PIPELINE: list[Extractor] = [
     PolicyExtractor(),
     BudgetExtractor(),
     EffectiveArtifactExtractor(),
+    LineageExtractor(),
+    ApprovalBindingExtractor(),
     PlanSignalsExtractor(),
+    WorkOrderSignalsExtractor(),
     ResultSignalsExtractor(),
+    ToolCallsExtractor(),
+    DriftSignalsExtractor(),
+    PermissionViolationExtractor(),
     SecurityScanExtractor(),
     GovernanceSnapshotSignalsExtractor(),
     FidelitySignalsExtractor(),

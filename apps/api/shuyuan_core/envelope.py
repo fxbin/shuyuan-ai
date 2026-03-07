@@ -20,7 +20,7 @@ STAGE_ARTIFACT_RULES: dict[Stage, set[ArtifactType]] = {
     Stage.PROFILE: {ArtifactType.TASK_PROFILE},
     Stage.POLICY: {ArtifactType.POLICY_DECISION},
     Stage.BUDGET: {ArtifactType.BUDGET_EVENT, ArtifactType.BUDGET_REQUEST},
-    Stage.PLANNING: {ArtifactType.PLAN},
+    Stage.PLANNING: {ArtifactType.PLAN, ArtifactType.EXPERIMENT_PLAN},
     Stage.REVIEW: {
         ArtifactType.REVIEW_REPORT,
         ArtifactType.AGENDA,
