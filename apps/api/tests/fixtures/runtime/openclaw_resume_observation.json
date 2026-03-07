@@ -1,0 +1,21 @@
+{
+  "page_or_view_id": "view-editor",
+  "source_channel": "gui",
+  "page_url": "https://example.test/editor",
+  "title": "Editor",
+  "visible_text_blocks": ["Editor ready", "Draft restored"],
+  "external_text_segments": [],
+  "ui_elements": [
+    {
+      "element_id": "btn-save",
+      "role": "button",
+      "label": "Save",
+      "action": "click",
+      "enabled": true,
+      "visible": true
+    }
+  ],
+  "focused_target": "btn-save",
+  "selection": "draft",
+  "cursor": "line:10,col:4"
+}

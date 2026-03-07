@@ -1,0 +1,21 @@
+{
+  "page_or_view_id": "view-dashboard",
+  "source_channel": "gui",
+  "page_url": "https://example.test/dashboard",
+  "title": "Dashboard",
+  "visible_text_blocks": ["Dashboard", "Recent jobs", "Everything looks healthy"],
+  "external_text_segments": [],
+  "ui_elements": [
+    {
+      "element_id": "btn-refresh",
+      "role": "button",
+      "label": "Refresh",
+      "action": "click",
+      "enabled": true,
+      "visible": true
+    }
+  ],
+  "focused_target": "btn-refresh",
+  "selection": null,
+  "cursor": null
+}
