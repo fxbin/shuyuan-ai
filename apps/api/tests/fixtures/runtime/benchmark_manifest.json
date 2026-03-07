@@ -1,0 +1,23 @@
+[
+  {
+    "id": "openclaw-clean-observation",
+    "fixture": "openclaw_clean_observation.json",
+    "expected_taint_detected": false,
+    "expected_route_decision": "allow",
+    "checkpoint_resume": false
+  },
+  {
+    "id": "openclaw-tainted-observation",
+    "fixture": "openclaw_tainted_observation.json",
+    "expected_taint_detected": true,
+    "expected_route_decision": "deny",
+    "checkpoint_resume": false
+  },
+  {
+    "id": "openclaw-interruption-resume",
+    "fixture": "openclaw_resume_observation.json",
+    "expected_taint_detected": false,
+    "expected_route_decision": "allow",
+    "checkpoint_resume": true
+  }
+]
