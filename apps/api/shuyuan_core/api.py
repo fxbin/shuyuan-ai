@@ -31,6 +31,12 @@ class RuntimeArtifactSubmitRequest(BaseModel):
     summary: str | None = None
 
 
+class OpenClawObservationRequest(BaseModel):
+    observation: dict[str, Any]
+    runtime_session_id: str | None = None
+    producer_agent: str = "openclaw-adapter"
+
+
 def create_app(service: GovernanceService | None = None) -> FastAPI:
     settings = get_settings()
     svc = service or GovernanceService()
@@ -185,6 +191,20 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
                 request.body,
                 producer_agent=request.producer_agent,
                 summary=request.summary,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except (GovernanceError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @router.post("/tasks/{task_id}/runtime/adapters/openclaw/observe")
+    async def submit_openclaw_observation(task_id: str, request: OpenClawObservationRequest) -> dict[str, Any]:
+        try:
+            return svc.submit_openclaw_observation(
+                task_id,
+                request.observation,
+                runtime_session_id=request.runtime_session_id,
+                producer_agent=request.producer_agent,
             )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc

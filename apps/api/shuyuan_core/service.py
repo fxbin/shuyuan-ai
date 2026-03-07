@@ -35,6 +35,7 @@ from .models import (
     WorldStateSnapshotBody,
     WorkOrderBody,
 )
+from .openclaw_adapter import OpenClawObservation, normalize_openclaw_observation
 from .routing import build_route_decision, build_runtime_route_decision
 from .store import GovernanceStore, SubmissionResult, create_governance_store
 from .store import ArchiveRecord
@@ -199,6 +200,41 @@ class GovernanceService:
             "runtime_session_id": runtime_session_id,
             "checkpoint_id": checkpoint_id,
             "items": [item.model_dump(mode="json") for item in lineage],
+        }
+
+    def submit_openclaw_observation(
+        self,
+        task_id: str,
+        observation_payload: dict[str, Any],
+        *,
+        runtime_session_id: str | None = None,
+        producer_agent: str = "openclaw-adapter",
+    ) -> dict[str, Any]:
+        self.store.get_task(task_id)
+        normalized_observation = OpenClawObservation.model_validate(observation_payload)
+        session_id = runtime_session_id or self.create_runtime_session(task_id, source_channel="gui")["runtime_session_id"]
+        artifacts = normalize_openclaw_observation(normalized_observation, runtime_session_id=session_id)
+        snapshot = self.submit_runtime_artifact(
+            task_id,
+            ArtifactType.WORLD_STATE_SNAPSHOT,
+            RuntimePhase.OBSERVE,
+            artifacts["world_state_snapshot"],
+            producer_agent=producer_agent,
+            summary="openclaw.observe",
+        )
+        assessment = self.submit_runtime_artifact(
+            task_id,
+            ArtifactType.OBSERVATION_ASSESSMENT,
+            RuntimePhase.SANITIZE,
+            artifacts["observation_assessment"],
+            producer_agent=producer_agent,
+            summary="openclaw.sanitize",
+        )
+        return {
+            "task_id": task_id,
+            "runtime_session_id": session_id,
+            "snapshot": snapshot,
+            "assessment": assessment,
         }
 
     def submit_runtime_artifact(
