@@ -6,7 +6,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .config import get_settings
-from .enums import ArtifactType
+from .enums import ArtifactType, RuntimePhase
 from .service import GovernanceError, GovernanceService
 from packages.schemas import get_named_schema, list_schema_catalog
 
@@ -18,6 +18,17 @@ class CreateTaskRequest(BaseModel):
 
 class RoutePreviewRequest(BaseModel):
     payload: dict[str, Any]
+
+
+class CreateRuntimeSessionRequest(BaseModel):
+    source_channel: str
+
+
+class RuntimeArtifactSubmitRequest(BaseModel):
+    runtime_phase: RuntimePhase
+    body: dict[str, Any]
+    producer_agent: str = "runtime-governor"
+    summary: str | None = None
 
 
 def create_app(service: GovernanceService | None = None) -> FastAPI:
@@ -105,6 +116,49 @@ def create_app(service: GovernanceService | None = None) -> FastAPI:
             return svc.get_operation_status(task_id, operation)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @router.post("/tasks/{task_id}/runtime/sessions")
+    async def create_runtime_session(task_id: str, request: CreateRuntimeSessionRequest) -> dict[str, Any]:
+        try:
+            return svc.create_runtime_session(task_id, source_channel=request.source_channel)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @router.get("/tasks/{task_id}/runtime/sessions/{runtime_session_id}")
+    async def get_runtime_state(task_id: str, runtime_session_id: str) -> dict[str, Any]:
+        try:
+            return svc.get_runtime_state(task_id, runtime_session_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @router.post("/tasks/{task_id}/runtime/{artifact_type}")
+    async def submit_runtime_artifact(
+        task_id: str,
+        artifact_type: ArtifactType,
+        request: RuntimeArtifactSubmitRequest,
+    ) -> dict[str, Any]:
+        if artifact_type not in {
+            ArtifactType.WORLD_STATE_SNAPSHOT,
+            ArtifactType.OBSERVATION_ASSESSMENT,
+            ArtifactType.ACTION_INTENT,
+            ArtifactType.ACTION_PREVIEW,
+            ArtifactType.SESSION_CHECKPOINT,
+            ArtifactType.RESUME_PACKET,
+        }:
+            raise HTTPException(status_code=400, detail=f"unsupported runtime artifact: {artifact_type.value}")
+        try:
+            return svc.submit_runtime_artifact(
+                task_id,
+                artifact_type,
+                request.runtime_phase,
+                request.body,
+                producer_agent=request.producer_agent,
+                summary=request.summary,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except (GovernanceError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @router.post("/tasks/{task_id}/challenge/run")
     async def run_challenge(task_id: str) -> dict[str, Any]:

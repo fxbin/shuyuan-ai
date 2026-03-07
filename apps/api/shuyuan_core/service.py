@@ -13,7 +13,7 @@ from .evolve import build_evolve_advice, build_vd_dashboard
 from .audit_runner import build_audit_envelope
 from .challenge_runner import build_challenge_envelope
 from .coordination import CoordinationError, Lease, RunCoordinator, create_run_coordinator
-from .enums import ArtifactType, EffectiveStatus, TaskMode, TaskState
+from .enums import ArtifactType, EffectiveStatus, RuntimePhase, TaskMode, TaskState
 from .envelope import StrictEnvelope
 from .extractors import build_yushi_context
 from .object_store import ObjectStore, create_object_store
@@ -62,6 +62,24 @@ class GovernanceService:
     def create_task(self, user_intent: str, trace_id: str | None = None) -> dict[str, Any]:
         task = self.store.create_task(user_intent=user_intent, trace_id=trace_id)
         return task.model_dump(mode="json")
+
+    def create_runtime_session(self, task_id: str, source_channel: str) -> dict[str, Any]:
+        task = self.store.get_task(task_id)
+        session_id = f"RS-{uuid4().hex[:12]}"
+        state = {
+            "task_id": task_id,
+            "trace_id": task.trace_id,
+            "runtime_session_id": session_id,
+            "source_channel": source_channel,
+            "status": "created",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self.coordinator.write_state(
+            self._runtime_session_key(task_id, session_id),
+            state,
+            ttl_s=self.settings.short_state_ttl_s,
+        )
+        return state
 
     def preview_route(self, payload: dict[str, Any]) -> dict[str, Any]:
         profile = TaskProfileBody.model_validate(payload)
@@ -133,6 +151,66 @@ class GovernanceService:
         task = self.store.get_task(task_id)
         context = build_yushi_context(task=task, task_events=self.store.list_events(task_id), store=self.store)
         return context.model_dump(mode="json")
+
+    def get_runtime_state(self, task_id: str, runtime_session_id: str) -> dict[str, Any]:
+        self.store.get_task(task_id)
+        state = self.coordinator.read_state(self._runtime_session_key(task_id, runtime_session_id))
+        if state is not None:
+            return state
+        context = self.build_yushi_context(task_id)
+        return {
+            "task_id": task_id,
+            "runtime_session_id": runtime_session_id,
+            "status": "unknown",
+            "signals": {
+                "observation": context["signals"].get("observation"),
+                "state_drift": context["signals"].get("state_drift"),
+                "checkpoint": context["signals"].get("checkpoint"),
+                "resume": context["signals"].get("resume"),
+            },
+        }
+
+    def submit_runtime_artifact(
+        self,
+        task_id: str,
+        artifact_type: ArtifactType,
+        runtime_phase: RuntimePhase,
+        body: dict[str, Any],
+        *,
+        producer_agent: str = "runtime-governor",
+        summary: str | None = None,
+    ) -> dict[str, Any]:
+        task = self.store.get_task(task_id)
+        envelope = self._build_runtime_envelope(
+            task_id=task_id,
+            trace_id=task.trace_id,
+            artifact_type=artifact_type,
+            runtime_phase=runtime_phase,
+            producer_agent=producer_agent,
+            body=body,
+            summary=summary,
+        )
+        submission = self.submit_envelope(envelope)
+        runtime_session_id = body.get("runtime_session_id")
+        if isinstance(runtime_session_id, str):
+            self.coordinator.write_state(
+                self._runtime_session_key(task_id, runtime_session_id),
+                {
+                    "task_id": task_id,
+                    "trace_id": task.trace_id,
+                    "runtime_session_id": runtime_session_id,
+                    "status": "updated",
+                    "last_artifact_type": artifact_type.value,
+                    "last_runtime_phase": runtime_phase.value,
+                    "event_id": submission.event_id,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+                ttl_s=self.settings.short_state_ttl_s,
+            )
+        return {
+            "submission": submission.model_dump(mode="json"),
+            "envelope": self.get_effective_artifact(task_id, artifact_type) or envelope,
+        }
 
     def get_operation_status(self, task_id: str, operation: str) -> dict[str, Any]:
         self.store.get_task(task_id)
@@ -729,8 +807,78 @@ class GovernanceService:
     def _operation_state_key(self, task_id: str, operation: str) -> str:
         return f"runstate:{operation}:{task_id}"
 
+    def _runtime_session_key(self, task_id: str, runtime_session_id: str) -> str:
+        return f"runtime-session:{task_id}:{runtime_session_id}"
+
     def _receipt_idempotency_key(self, task_id: str, request_idempotency_key: str) -> str:
         return f"receipt-idempotency:{task_id}:{request_idempotency_key}"
+
+    def _build_runtime_envelope(
+        self,
+        *,
+        task_id: str,
+        trace_id: str,
+        artifact_type: ArtifactType,
+        runtime_phase: RuntimePhase,
+        producer_agent: str,
+        body: dict[str, Any],
+        summary: str | None,
+    ) -> dict[str, Any]:
+        latest = self.store.list_events(task_id)[-1].envelope if self.store.list_events(task_id) else None
+        route = self.get_route_decision(task_id) or {}
+        lane = latest.header.lane.value if latest else route.get("lane_choice", "norm")
+        level = latest.header.complexity_level.value if latest else route.get("complexity_level", "L1")
+        module_set = latest.header.module_set if latest else route.get("module_set", ["runtime_governance"])
+        stage_by_artifact = {
+            ArtifactType.WORLD_STATE_SNAPSHOT: "execute",
+            ArtifactType.OBSERVATION_ASSESSMENT: "execute",
+            ArtifactType.ACTION_INTENT: "execute",
+            ArtifactType.ACTION_PREVIEW: "pre_execute",
+            ArtifactType.SESSION_CHECKPOINT: "execute",
+            ArtifactType.RESUME_PACKET: "execute",
+        }
+        event_id = f"EV-{artifact_type.value}-{uuid4().hex[:10]}"
+        return {
+            "header": {
+                "task_id": task_id,
+                "trace_id": trace_id,
+                "event_id": event_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "lane": lane,
+                "stage": stage_by_artifact[artifact_type],
+                "complexity_level": level,
+                "artifact_type": artifact_type.value,
+                "module_set": module_set,
+                "producer_agent": producer_agent,
+                "reviewer_agent": None,
+                "approver_agent": None,
+                "schema_version": "v2",
+                "operating_mode": latest.header.operating_mode.value if latest else "deliberative",
+                "task_mode": latest.header.task_mode.value if latest else "production",
+                "runtime_phase": runtime_phase.value,
+            },
+            "summary": summary or f"{artifact_type.value}:{runtime_phase.value}",
+            "citations": [],
+            "constraints": latest.constraints.model_dump(mode="json") if latest else {"hard": [], "soft": []},
+            "budget": latest.budget.model_dump(mode="json") if latest else {
+                "token_cap": 0,
+                "token_used": 0,
+                "time_cap_s": 0,
+                "tool_cap": 0,
+                "tool_used": 0,
+            },
+            "governance_carryover": latest.governance_carryover.model_dump(mode="json") if latest else {
+                "hard_constraints": [],
+                "approval_binding": None,
+                "critical_risk_notes": [],
+                "known_limits": [],
+                "open_disagreements": [],
+                "minority_view": [],
+                "failed_self_check": [],
+                "commit_gate": "unknown",
+            },
+            "body": body,
+        }
 
     def _attach_archive_bundle(self, record: ArchiveRecord) -> ArchiveRecord:
         stored = self.object_store.put_json(
