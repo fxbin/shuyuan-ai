@@ -1,0 +1,163 @@
+{
+  "$defs": {
+    "RuntimePhase": {
+      "enum": [
+        "observe",
+        "sanitize",
+        "freeze_state",
+        "plan_action",
+        "preview",
+        "commit",
+        "checkpoint",
+        "resume"
+      ],
+      "title": "RuntimePhase",
+      "type": "string"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/resume_packet.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "affordances": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Affordances",
+      "type": "array"
+    },
+    "checkpoint_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Checkpoint Id"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "observation_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Observation Hash"
+    },
+    "parent_snapshot_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Snapshot Id"
+    },
+    "resume_from_checkpoint_id": {
+      "title": "Resume From Checkpoint Id",
+      "type": "string"
+    },
+    "resume_reason": {
+      "title": "Resume Reason",
+      "type": "string"
+    },
+    "resume_strategy": {
+      "enum": [
+        "continue",
+        "reobserve",
+        "refreeze",
+        "deny"
+      ],
+      "title": "Resume Strategy",
+      "type": "string"
+    },
+    "resumed_at": {
+      "format": "date-time",
+      "title": "Resumed At",
+      "type": "string"
+    },
+    "runtime_phase": {
+      "$ref": "#/$defs/RuntimePhase"
+    },
+    "runtime_session_id": {
+      "title": "Runtime Session Id",
+      "type": "string"
+    },
+    "snapshot_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Snapshot Id"
+    },
+    "source_channel": {
+      "enum": [
+        "gui",
+        "web",
+        "api",
+        "terminal",
+        "other"
+      ],
+      "title": "Source Channel",
+      "type": "string"
+    },
+    "stale_risk": {
+      "enum": [
+        "low",
+        "med",
+        "high"
+      ],
+      "title": "Stale Risk",
+      "type": "string"
+    },
+    "taint_flags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Taint Flags",
+      "type": "array"
+    },
+    "trust_level": {
+      "enum": [
+        "untrusted",
+        "tainted",
+        "trusted",
+        "verified"
+      ],
+      "title": "Trust Level",
+      "type": "string"
+    }
+  },
+  "required": [
+    "runtime_session_id",
+    "runtime_phase",
+    "resume_from_checkpoint_id",
+    "source_channel",
+    "trust_level",
+    "resumed_at",
+    "resume_reason",
+    "stale_risk",
+    "resume_strategy"
+  ],
+  "title": "ResumePacketBody",
+  "type": "object"
+}

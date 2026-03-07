@@ -1,5 +1,316 @@
 {
   "$defs": {
+    "ActionIntentBody": {
+      "additionalProperties": false,
+      "properties": {
+        "action_target": {
+          "title": "Action Target",
+          "type": "string"
+        },
+        "action_type": {
+          "title": "Action Type",
+          "type": "string"
+        },
+        "affordances": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affordances",
+          "type": "array"
+        },
+        "checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpoint Id"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "intent_summary": {
+          "title": "Intent Summary",
+          "type": "string"
+        },
+        "observation_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Hash"
+        },
+        "parent_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Snapshot Id"
+        },
+        "requires_frozen_snapshot": {
+          "title": "Requires Frozen Snapshot",
+          "type": "boolean"
+        },
+        "resume_from_checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resume From Checkpoint Id"
+        },
+        "runtime_phase": {
+          "$ref": "#/$defs/RuntimePhase"
+        },
+        "runtime_session_id": {
+          "title": "Runtime Session Id",
+          "type": "string"
+        },
+        "side_effect_level": {
+          "enum": [
+            "none",
+            "read_only",
+            "internal_write",
+            "external_write",
+            "external_commit"
+          ],
+          "title": "Side Effect Level",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Id"
+        },
+        "source_channel": {
+          "enum": [
+            "gui",
+            "web",
+            "api",
+            "terminal",
+            "other"
+          ],
+          "title": "Source Channel",
+          "type": "string"
+        },
+        "taint_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Taint Flags",
+          "type": "array"
+        },
+        "trust_level": {
+          "enum": [
+            "untrusted",
+            "tainted",
+            "trusted",
+            "verified"
+          ],
+          "title": "Trust Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "runtime_session_id",
+        "runtime_phase",
+        "source_channel",
+        "trust_level",
+        "intent_summary",
+        "action_type",
+        "action_target",
+        "side_effect_level",
+        "requires_frozen_snapshot"
+      ],
+      "title": "ActionIntentBody",
+      "type": "object"
+    },
+    "ActionPreviewBody": {
+      "additionalProperties": false,
+      "properties": {
+        "action_target": {
+          "title": "Action Target",
+          "type": "string"
+        },
+        "action_type": {
+          "title": "Action Type",
+          "type": "string"
+        },
+        "affordances": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affordances",
+          "type": "array"
+        },
+        "checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpoint Id"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "observation_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Hash"
+        },
+        "parent_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Snapshot Id"
+        },
+        "predicted_effects": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Predicted Effects",
+          "type": "array"
+        },
+        "preview_status": {
+          "enum": [
+            "allow",
+            "allow_with_conditions",
+            "deny"
+          ],
+          "title": "Preview Status",
+          "type": "string"
+        },
+        "requires_approval": {
+          "title": "Requires Approval",
+          "type": "boolean"
+        },
+        "resume_from_checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resume From Checkpoint Id"
+        },
+        "risk_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Risk Notes",
+          "type": "array"
+        },
+        "runtime_phase": {
+          "$ref": "#/$defs/RuntimePhase"
+        },
+        "runtime_session_id": {
+          "title": "Runtime Session Id",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Id"
+        },
+        "source_channel": {
+          "enum": [
+            "gui",
+            "web",
+            "api",
+            "terminal",
+            "other"
+          ],
+          "title": "Source Channel",
+          "type": "string"
+        },
+        "taint_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Taint Flags",
+          "type": "array"
+        },
+        "trust_level": {
+          "enum": [
+            "untrusted",
+            "tainted",
+            "trusted",
+            "verified"
+          ],
+          "title": "Trust Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "runtime_session_id",
+        "runtime_phase",
+        "source_channel",
+        "trust_level",
+        "action_type",
+        "action_target",
+        "preview_status",
+        "requires_approval"
+      ],
+      "title": "ActionPreviewBody",
+      "type": "object"
+    },
     "AffectedObject": {
       "additionalProperties": false,
       "properties": {
@@ -139,6 +450,12 @@
         "policy_decision",
         "budget_event",
         "budget_request",
+        "world_state_snapshot",
+        "observation_assessment",
+        "action_intent",
+        "action_preview",
+        "session_checkpoint",
+        "resume_packet",
         "plan",
         "review_report",
         "work_order",
@@ -1204,6 +1521,17 @@
           "default": null,
           "title": "Reviewer Agent"
         },
+        "runtime_phase": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePhase"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "schema_version": {
           "title": "Schema Version",
           "type": "string"
@@ -1854,6 +2182,175 @@
         "reason"
       ],
       "title": "LaneSuggestion",
+      "type": "object"
+    },
+    "ObservationAssessmentBody": {
+      "additionalProperties": false,
+      "properties": {
+        "affordance_integrity": {
+          "enum": [
+            "intact",
+            "degraded",
+            "spoofed"
+          ],
+          "title": "Affordance Integrity",
+          "type": "string"
+        },
+        "affordances": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affordances",
+          "type": "array"
+        },
+        "assessed_at": {
+          "format": "date-time",
+          "title": "Assessed At",
+          "type": "string"
+        },
+        "checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpoint Id"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "observation_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Hash"
+        },
+        "parent_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Snapshot Id"
+        },
+        "recommendation": {
+          "title": "Recommendation",
+          "type": "string"
+        },
+        "resume_from_checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resume From Checkpoint Id"
+        },
+        "runtime_phase": {
+          "$ref": "#/$defs/RuntimePhase"
+        },
+        "runtime_session_id": {
+          "title": "Runtime Session Id",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Id"
+        },
+        "source_channel": {
+          "enum": [
+            "gui",
+            "web",
+            "api",
+            "terminal",
+            "other"
+          ],
+          "title": "Source Channel",
+          "type": "string"
+        },
+        "state_drift_risk": {
+          "enum": [
+            "low",
+            "med",
+            "high",
+            "critical"
+          ],
+          "title": "State Drift Risk",
+          "type": "string"
+        },
+        "taint_detected": {
+          "title": "Taint Detected",
+          "type": "boolean"
+        },
+        "taint_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Taint Flags",
+          "type": "array"
+        },
+        "taint_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Taint Reasons",
+          "type": "array"
+        },
+        "trust_level": {
+          "enum": [
+            "untrusted",
+            "tainted",
+            "trusted",
+            "verified"
+          ],
+          "title": "Trust Level",
+          "type": "string"
+        },
+        "trusted_observation_minimum": {
+          "title": "Trusted Observation Minimum",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "runtime_session_id",
+        "runtime_phase",
+        "source_channel",
+        "trust_level",
+        "assessed_at",
+        "taint_detected",
+        "trusted_observation_minimum",
+        "state_drift_risk",
+        "affordance_integrity",
+        "recommendation"
+      ],
+      "title": "ObservationAssessmentBody",
       "type": "object"
     },
     "OpenDisagreement": {
@@ -2535,6 +3032,151 @@
       "title": "ResultOutput",
       "type": "object"
     },
+    "ResumePacketBody": {
+      "additionalProperties": false,
+      "properties": {
+        "affordances": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affordances",
+          "type": "array"
+        },
+        "checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpoint Id"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "observation_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Hash"
+        },
+        "parent_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Snapshot Id"
+        },
+        "resume_from_checkpoint_id": {
+          "title": "Resume From Checkpoint Id",
+          "type": "string"
+        },
+        "resume_reason": {
+          "title": "Resume Reason",
+          "type": "string"
+        },
+        "resume_strategy": {
+          "enum": [
+            "continue",
+            "reobserve",
+            "refreeze",
+            "deny"
+          ],
+          "title": "Resume Strategy",
+          "type": "string"
+        },
+        "resumed_at": {
+          "format": "date-time",
+          "title": "Resumed At",
+          "type": "string"
+        },
+        "runtime_phase": {
+          "$ref": "#/$defs/RuntimePhase"
+        },
+        "runtime_session_id": {
+          "title": "Runtime Session Id",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Id"
+        },
+        "source_channel": {
+          "enum": [
+            "gui",
+            "web",
+            "api",
+            "terminal",
+            "other"
+          ],
+          "title": "Source Channel",
+          "type": "string"
+        },
+        "stale_risk": {
+          "enum": [
+            "low",
+            "med",
+            "high"
+          ],
+          "title": "Stale Risk",
+          "type": "string"
+        },
+        "taint_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Taint Flags",
+          "type": "array"
+        },
+        "trust_level": {
+          "enum": [
+            "untrusted",
+            "tainted",
+            "trusted",
+            "verified"
+          ],
+          "title": "Trust Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "runtime_session_id",
+        "runtime_phase",
+        "resume_from_checkpoint_id",
+        "source_channel",
+        "trust_level",
+        "resumed_at",
+        "resume_reason",
+        "stale_risk",
+        "resume_strategy"
+      ],
+      "title": "ResumePacketBody",
+      "type": "object"
+    },
     "ReviewIssue": {
       "additionalProperties": false,
       "properties": {
@@ -2771,6 +3413,20 @@
       "title": "RoundSummaryBody",
       "type": "object"
     },
+    "RuntimePhase": {
+      "enum": [
+        "observe",
+        "sanitize",
+        "freeze_state",
+        "plan_action",
+        "preview",
+        "commit",
+        "checkpoint",
+        "resume"
+      ],
+      "title": "RuntimePhase",
+      "type": "string"
+    },
     "Schedule": {
       "additionalProperties": false,
       "properties": {
@@ -2830,6 +3486,147 @@
         "notes"
       ],
       "title": "SelfCheckItem",
+      "type": "object"
+    },
+    "SessionCheckpointBody": {
+      "additionalProperties": false,
+      "properties": {
+        "affordances": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affordances",
+          "type": "array"
+        },
+        "bound_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bound Snapshot Id"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "checkpoint_id": {
+          "title": "Checkpoint Id",
+          "type": "string"
+        },
+        "checkpoint_summary": {
+          "title": "Checkpoint Summary",
+          "type": "string"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "observation_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Hash"
+        },
+        "parent_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Snapshot Id"
+        },
+        "restorable": {
+          "title": "Restorable",
+          "type": "boolean"
+        },
+        "resume_from_checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resume From Checkpoint Id"
+        },
+        "runtime_phase": {
+          "$ref": "#/$defs/RuntimePhase"
+        },
+        "runtime_session_id": {
+          "title": "Runtime Session Id",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Id"
+        },
+        "source_channel": {
+          "enum": [
+            "gui",
+            "web",
+            "api",
+            "terminal",
+            "other"
+          ],
+          "title": "Source Channel",
+          "type": "string"
+        },
+        "taint_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Taint Flags",
+          "type": "array"
+        },
+        "trust_level": {
+          "enum": [
+            "untrusted",
+            "tainted",
+            "trusted",
+            "verified"
+          ],
+          "title": "Trust Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "runtime_session_id",
+        "runtime_phase",
+        "checkpoint_id",
+        "source_channel",
+        "trust_level",
+        "captured_at",
+        "checkpoint_summary",
+        "restorable"
+      ],
+      "title": "SessionCheckpointBody",
       "type": "object"
     },
     "Stage": {
@@ -3170,6 +3967,154 @@
       ],
       "title": "WorkOrderBody",
       "type": "object"
+    },
+    "WorldStateSnapshotBody": {
+      "additionalProperties": false,
+      "properties": {
+        "affordances": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affordances",
+          "type": "array"
+        },
+        "checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpoint Id"
+        },
+        "ext": {
+          "additionalProperties": true,
+          "title": "Ext",
+          "type": "object"
+        },
+        "observation_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Hash"
+        },
+        "observation_summary": {
+          "title": "Observation Summary",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "parent_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Snapshot Id"
+        },
+        "resume_from_checkpoint_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resume From Checkpoint Id"
+        },
+        "runtime_phase": {
+          "$ref": "#/$defs/RuntimePhase"
+        },
+        "runtime_session_id": {
+          "title": "Runtime Session Id",
+          "type": "string"
+        },
+        "sanitized": {
+          "title": "Sanitized",
+          "type": "boolean"
+        },
+        "snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Id"
+        },
+        "source_channel": {
+          "enum": [
+            "gui",
+            "web",
+            "api",
+            "terminal",
+            "other"
+          ],
+          "title": "Source Channel",
+          "type": "string"
+        },
+        "state_digest": {
+          "title": "State Digest",
+          "type": "string"
+        },
+        "taint_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Taint Flags",
+          "type": "array"
+        },
+        "trust_level": {
+          "enum": [
+            "untrusted",
+            "tainted",
+            "trusted",
+            "verified"
+          ],
+          "title": "Trust Level",
+          "type": "string"
+        },
+        "visible_targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Visible Targets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "runtime_session_id",
+        "runtime_phase",
+        "source_channel",
+        "trust_level",
+        "observed_at",
+        "state_digest",
+        "observation_summary",
+        "sanitized"
+      ],
+      "title": "WorldStateSnapshotBody",
+      "type": "object"
     }
   },
   "$id": "https://shuyuan.ai/schema/strict_envelope.json",
@@ -3189,6 +4134,24 @@
         },
         {
           "$ref": "#/$defs/BudgetRequestBody"
+        },
+        {
+          "$ref": "#/$defs/WorldStateSnapshotBody"
+        },
+        {
+          "$ref": "#/$defs/ObservationAssessmentBody"
+        },
+        {
+          "$ref": "#/$defs/ActionIntentBody"
+        },
+        {
+          "$ref": "#/$defs/ActionPreviewBody"
+        },
+        {
+          "$ref": "#/$defs/SessionCheckpointBody"
+        },
+        {
+          "$ref": "#/$defs/ResumePacketBody"
         },
         {
           "$ref": "#/$defs/PlanBody"

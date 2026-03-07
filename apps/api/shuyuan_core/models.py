@@ -11,6 +11,7 @@ from .enums import (
     EffectiveStatus,
     Lane,
     OperatingMode,
+    RuntimePhase,
     Stage,
     TaskMode,
 )
@@ -93,6 +94,7 @@ class EnvelopeHeader(StrictModel):
     schema_version: str
     operating_mode: OperatingMode
     task_mode: TaskMode
+    runtime_phase: RuntimePhase | None = None
 
 
 class TaskProfileBody(StrictModel):
@@ -176,6 +178,78 @@ class BudgetRequestBody(StrictModel):
     expected_value: str
     urgency: Literal["low", "med", "high"]
     ext: dict[str, Any] = Field(default_factory=dict)
+
+
+class RuntimeArtifactBase(StrictModel):
+    runtime_session_id: str
+    runtime_phase: RuntimePhase
+    snapshot_id: str | None = None
+    parent_snapshot_id: str | None = None
+    checkpoint_id: str | None = None
+    resume_from_checkpoint_id: str | None = None
+    observation_hash: str | None = None
+    taint_flags: list[str] = Field(default_factory=list)
+    affordances: list[str] = Field(default_factory=list)
+    source_channel: Literal["gui", "web", "api", "terminal", "other"]
+    trust_level: Literal["untrusted", "tainted", "trusted", "verified"]
+    ext: dict[str, Any] = Field(default_factory=dict)
+
+
+class WorldStateSnapshotBody(RuntimeArtifactBase):
+    observed_at: datetime
+    state_digest: str
+    observation_summary: str
+    sanitized: bool
+    visible_targets: list[str] = Field(default_factory=list)
+
+
+class ObservationAssessmentBody(RuntimeArtifactBase):
+    assessed_at: datetime
+    taint_detected: bool
+    taint_reasons: list[str] = Field(default_factory=list)
+    trusted_observation_minimum: bool
+    state_drift_risk: Literal["low", "med", "high", "critical"]
+    affordance_integrity: Literal["intact", "degraded", "spoofed"]
+    recommendation: str
+
+
+class ActionIntentBody(RuntimeArtifactBase):
+    intent_summary: str
+    action_type: str
+    action_target: str
+    side_effect_level: Literal[
+        "none",
+        "read_only",
+        "internal_write",
+        "external_write",
+        "external_commit",
+    ]
+    requires_frozen_snapshot: bool
+
+
+class ActionPreviewBody(RuntimeArtifactBase):
+    action_type: str
+    action_target: str
+    preview_status: Literal["allow", "allow_with_conditions", "deny"]
+    predicted_effects: list[str] = Field(default_factory=list)
+    risk_notes: list[str] = Field(default_factory=list)
+    requires_approval: bool
+
+
+class SessionCheckpointBody(RuntimeArtifactBase):
+    checkpoint_id: str
+    captured_at: datetime
+    checkpoint_summary: str
+    bound_snapshot_id: str | None = None
+    restorable: bool
+
+
+class ResumePacketBody(RuntimeArtifactBase):
+    resume_from_checkpoint_id: str
+    resumed_at: datetime
+    resume_reason: str
+    stale_risk: Literal["low", "med", "high"]
+    resume_strategy: Literal["continue", "reobserve", "refreeze", "deny"]
 
 
 class ConstraintItem(StrictModel):
@@ -611,6 +685,12 @@ ArtifactBody = Annotated[
     | PolicyDecisionBody
     | BudgetEventBody
     | BudgetRequestBody
+    | WorldStateSnapshotBody
+    | ObservationAssessmentBody
+    | ActionIntentBody
+    | ActionPreviewBody
+    | SessionCheckpointBody
+    | ResumePacketBody
     | PlanBody
     | ReviewReportBody
     | WorkOrderBody
@@ -633,6 +713,12 @@ ARTIFACT_BODY_MODELS: dict[ArtifactType, type[ArtifactBody]] = {
     ArtifactType.POLICY_DECISION: PolicyDecisionBody,
     ArtifactType.BUDGET_EVENT: BudgetEventBody,
     ArtifactType.BUDGET_REQUEST: BudgetRequestBody,
+    ArtifactType.WORLD_STATE_SNAPSHOT: WorldStateSnapshotBody,
+    ArtifactType.OBSERVATION_ASSESSMENT: ObservationAssessmentBody,
+    ArtifactType.ACTION_INTENT: ActionIntentBody,
+    ArtifactType.ACTION_PREVIEW: ActionPreviewBody,
+    ArtifactType.SESSION_CHECKPOINT: SessionCheckpointBody,
+    ArtifactType.RESUME_PACKET: ResumePacketBody,
     ArtifactType.PLAN: PlanBody,
     ArtifactType.REVIEW_REPORT: ReviewReportBody,
     ArtifactType.WORK_ORDER: WorkOrderBody,

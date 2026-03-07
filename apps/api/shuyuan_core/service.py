@@ -425,6 +425,36 @@ class GovernanceService:
             self._validate_dispatch_prerequisites(envelope.header.task_id, body)
             return TaskState.PRE_EXECUTE_CHECK
 
+        if artifact_type == ArtifactType.ACTION_PREVIEW:
+            self._assert_state(
+                current_state,
+                {TaskState.DISPATCH_READY, TaskState.PRE_EXECUTE_CHECK, TaskState.EXECUTING, TaskState.EXECUTING_READONLY},
+                artifact_type,
+            )
+            return TaskState.PRE_EXECUTE_CHECK
+
+        if artifact_type in {
+            ArtifactType.WORLD_STATE_SNAPSHOT,
+            ArtifactType.OBSERVATION_ASSESSMENT,
+            ArtifactType.ACTION_INTENT,
+            ArtifactType.SESSION_CHECKPOINT,
+            ArtifactType.RESUME_PACKET,
+        }:
+            self._assert_state(
+                current_state,
+                {
+                    TaskState.DISPATCH_READY,
+                    TaskState.PRE_EXECUTE_CHECK,
+                    TaskState.EXECUTING,
+                    TaskState.EXECUTING_READONLY,
+                    TaskState.PRE_COMMIT_CHECK,
+                    TaskState.COMMIT_AUTHORIZED,
+                    TaskState.EXTERNAL_COMMITTED,
+                },
+                artifact_type,
+            )
+            return current_state
+
         if artifact_type == ArtifactType.RESULT:
             self._assert_state(current_state, {TaskState.PRE_EXECUTE_CHECK}, artifact_type)
             self._validate_pre_execute(envelope.header.task_id, body)

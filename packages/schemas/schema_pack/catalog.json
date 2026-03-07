@@ -8,6 +8,18 @@
       "path": "strict_envelope.json"
     },
     {
+      "description": "action_intent body schema",
+      "kind": "artifact_body",
+      "name": "action_intent",
+      "path": "artifacts/action_intent.json"
+    },
+    {
+      "description": "action_preview body schema",
+      "kind": "artifact_body",
+      "name": "action_preview",
+      "path": "artifacts/action_preview.json"
+    },
+    {
       "description": "agenda body schema",
       "kind": "artifact_body",
       "name": "agenda",
@@ -62,6 +74,12 @@
       "path": "artifacts/governance_snapshot.json"
     },
     {
+      "description": "observation_assessment body schema",
+      "kind": "artifact_body",
+      "name": "observation_assessment",
+      "path": "artifacts/observation_assessment.json"
+    },
+    {
       "description": "plan body schema",
       "kind": "artifact_body",
       "name": "plan",
@@ -86,6 +104,12 @@
       "path": "artifacts/result.json"
     },
     {
+      "description": "resume_packet body schema",
+      "kind": "artifact_body",
+      "name": "resume_packet",
+      "path": "artifacts/resume_packet.json"
+    },
+    {
       "description": "review_report body schema",
       "kind": "artifact_body",
       "name": "review_report",
@@ -98,6 +122,12 @@
       "path": "artifacts/round_summary.json"
     },
     {
+      "description": "session_checkpoint body schema",
+      "kind": "artifact_body",
+      "name": "session_checkpoint",
+      "path": "artifacts/session_checkpoint.json"
+    },
+    {
       "description": "task_profile body schema",
       "kind": "artifact_body",
       "name": "task_profile",
@@ -108,6 +138,12 @@
       "kind": "artifact_body",
       "name": "work_order",
       "path": "artifacts/work_order.json"
+    },
+    {
+      "description": "world_state_snapshot body schema",
+      "kind": "artifact_body",
+      "name": "world_state_snapshot",
+      "path": "artifacts/world_state_snapshot.json"
     }
   ]
 }

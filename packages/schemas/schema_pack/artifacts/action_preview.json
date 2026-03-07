@@ -1,0 +1,177 @@
+{
+  "$defs": {
+    "RuntimePhase": {
+      "enum": [
+        "observe",
+        "sanitize",
+        "freeze_state",
+        "plan_action",
+        "preview",
+        "commit",
+        "checkpoint",
+        "resume"
+      ],
+      "title": "RuntimePhase",
+      "type": "string"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/action_preview.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action_target": {
+      "title": "Action Target",
+      "type": "string"
+    },
+    "action_type": {
+      "title": "Action Type",
+      "type": "string"
+    },
+    "affordances": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Affordances",
+      "type": "array"
+    },
+    "checkpoint_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Checkpoint Id"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "observation_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Observation Hash"
+    },
+    "parent_snapshot_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Snapshot Id"
+    },
+    "predicted_effects": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Predicted Effects",
+      "type": "array"
+    },
+    "preview_status": {
+      "enum": [
+        "allow",
+        "allow_with_conditions",
+        "deny"
+      ],
+      "title": "Preview Status",
+      "type": "string"
+    },
+    "requires_approval": {
+      "title": "Requires Approval",
+      "type": "boolean"
+    },
+    "resume_from_checkpoint_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Resume From Checkpoint Id"
+    },
+    "risk_notes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Risk Notes",
+      "type": "array"
+    },
+    "runtime_phase": {
+      "$ref": "#/$defs/RuntimePhase"
+    },
+    "runtime_session_id": {
+      "title": "Runtime Session Id",
+      "type": "string"
+    },
+    "snapshot_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Snapshot Id"
+    },
+    "source_channel": {
+      "enum": [
+        "gui",
+        "web",
+        "api",
+        "terminal",
+        "other"
+      ],
+      "title": "Source Channel",
+      "type": "string"
+    },
+    "taint_flags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Taint Flags",
+      "type": "array"
+    },
+    "trust_level": {
+      "enum": [
+        "untrusted",
+        "tainted",
+        "trusted",
+        "verified"
+      ],
+      "title": "Trust Level",
+      "type": "string"
+    }
+  },
+  "required": [
+    "runtime_session_id",
+    "runtime_phase",
+    "source_channel",
+    "trust_level",
+    "action_type",
+    "action_target",
+    "preview_status",
+    "requires_approval"
+  ],
+  "title": "ActionPreviewBody",
+  "type": "object"
+}

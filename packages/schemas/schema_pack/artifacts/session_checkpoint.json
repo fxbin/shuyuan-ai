@@ -1,0 +1,159 @@
+{
+  "$defs": {
+    "RuntimePhase": {
+      "enum": [
+        "observe",
+        "sanitize",
+        "freeze_state",
+        "plan_action",
+        "preview",
+        "commit",
+        "checkpoint",
+        "resume"
+      ],
+      "title": "RuntimePhase",
+      "type": "string"
+    }
+  },
+  "$id": "https://shuyuan.ai/schema/artifacts/session_checkpoint.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "affordances": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Affordances",
+      "type": "array"
+    },
+    "bound_snapshot_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Bound Snapshot Id"
+    },
+    "captured_at": {
+      "format": "date-time",
+      "title": "Captured At",
+      "type": "string"
+    },
+    "checkpoint_id": {
+      "title": "Checkpoint Id",
+      "type": "string"
+    },
+    "checkpoint_summary": {
+      "title": "Checkpoint Summary",
+      "type": "string"
+    },
+    "ext": {
+      "additionalProperties": true,
+      "title": "Ext",
+      "type": "object"
+    },
+    "observation_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Observation Hash"
+    },
+    "parent_snapshot_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Snapshot Id"
+    },
+    "restorable": {
+      "title": "Restorable",
+      "type": "boolean"
+    },
+    "resume_from_checkpoint_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Resume From Checkpoint Id"
+    },
+    "runtime_phase": {
+      "$ref": "#/$defs/RuntimePhase"
+    },
+    "runtime_session_id": {
+      "title": "Runtime Session Id",
+      "type": "string"
+    },
+    "snapshot_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Snapshot Id"
+    },
+    "source_channel": {
+      "enum": [
+        "gui",
+        "web",
+        "api",
+        "terminal",
+        "other"
+      ],
+      "title": "Source Channel",
+      "type": "string"
+    },
+    "taint_flags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Taint Flags",
+      "type": "array"
+    },
+    "trust_level": {
+      "enum": [
+        "untrusted",
+        "tainted",
+        "trusted",
+        "verified"
+      ],
+      "title": "Trust Level",
+      "type": "string"
+    }
+  },
+  "required": [
+    "runtime_session_id",
+    "runtime_phase",
+    "checkpoint_id",
+    "source_channel",
+    "trust_level",
+    "captured_at",
+    "checkpoint_summary",
+    "restorable"
+  ],
+  "title": "SessionCheckpointBody",
+  "type": "object"
+}

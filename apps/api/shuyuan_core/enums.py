@@ -38,6 +38,12 @@ class ArtifactType(StrEnum):
     POLICY_DECISION = "policy_decision"
     BUDGET_EVENT = "budget_event"
     BUDGET_REQUEST = "budget_request"
+    WORLD_STATE_SNAPSHOT = "world_state_snapshot"
+    OBSERVATION_ASSESSMENT = "observation_assessment"
+    ACTION_INTENT = "action_intent"
+    ACTION_PREVIEW = "action_preview"
+    SESSION_CHECKPOINT = "session_checkpoint"
+    RESUME_PACKET = "resume_packet"
     PLAN = "plan"
     REVIEW_REPORT = "review_report"
     WORK_ORDER = "work_order"
@@ -74,6 +80,17 @@ class EffectiveStatus(StrEnum):
     SUPERSEDED = "superseded"
     REVOKED = "revoked"
     EFFECTIVE = "effective"
+
+
+class RuntimePhase(StrEnum):
+    OBSERVE = "observe"
+    SANITIZE = "sanitize"
+    FREEZE_STATE = "freeze_state"
+    PLAN_ACTION = "plan_action"
+    PREVIEW = "preview"
+    COMMIT = "commit"
+    CHECKPOINT = "checkpoint"
+    RESUME = "resume"
 
 
 class TaskState(StrEnum):
